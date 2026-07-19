@@ -1,69 +1,84 @@
-# Vermogensmonitor — geïntegreerd standaardbestand (concept / MVP)
+# Vermogensmonitor Premium — geïntegreerd standaardbestand
 
 Eén schaalbaar Excel-standaardbestand voor de accountantspraktijk dat het actuele
-vermogen van een klant (met of zonder partner) inzichtelijk maakt én
-toekomstgericht doorrekent via scenario's. Ontworpen om data uit de **aangifte
-inkomstenbelasting** en de **jaarrekening** te combineren.
+vermogen van een klant (met of zonder partner) inzichtelijk maakt, corrigeert voor
+**latente belastingen**, en toekomstgericht doorrekent via scenario's. Combineert
+data uit de **aangifte inkomstenbelasting** en de **jaarrekening (BV/DGA)**.
 
-**Bestand:** `Vermogensmonitor_Concept.xlsx`
+**Hoofdbestand:** `Vermogensmonitor_Premium.xlsx` (v2 — premium groene uitstraling)
+**Eerdere MVP:** `Vermogensmonitor_Concept.xlsx` (v1 — eenvoudiger, ter referentie)
 
----
+Het Premium-bestand integreert het beste van drie aangeleverde bronbestanden:
 
-## Architectuur — strikte laagscheiding
+| Bron | Overgenomen |
+|------|-------------|
+| Vermogensmonitor.xlsx | box 1/2/3-structuur, latente belastingen, KPI-set, **huisstijl-groen** |
+| Private Wealth Dashboard.xlsx | data-ingang (IB + jaarrekening), scenario-events, adviesrapport-idee |
+| Vermogensplanning_sjabloon.xlsx | meerjaren-prognose, scenario-delta, doelvermogen |
+
+## Huisstijl
+
+Donkergroen `#0C5F42` · accentgroen `#1CE175` · mint `#9AD9BE` · lichtgrijs `#F4F6F5`
+(overgenomen uit het bronbestand). Dashboard geïnspireerd op de aangeleverde
+referentie: icon-chip KPI-cards, doughnut, solvabiliteits-gauge, area-chart,
+progress-bars, status-signalen en een donkergroene navigatierail.
+
+## Architectuur — strikte laagscheiding (13 tabbladen)
 
 | Laag | Tabbladen | Rol |
 |------|-----------|-----|
-| **Navigatie** | `START` | Klant, peildatum, partnerschakelaar, versie, status |
-| **Input** (blauw) | `01_Klant`, `02_Input_IB`, `03_Input_JR`, `04_Input_Vermogen`, `05_Historie` | Gestandaardiseerde brondata-invoer |
-| **Verwerking** (grijs) | `11_Berekeningen` | KPI's, ratio's, partner-consolidatie |
-| **Output** (groen) | `20_Dashboard`, `21_Scenario` | Cliëntdashboard + financiële planning |
-| **Config/QA** (oranje) | `90_Config`, `91_Mapping`, `99_Controles` | Keuzelijsten, mapping, kwaliteitscontroles |
+| Navigatie | `START` | Klant, peildatum, partnerschakelaar, status |
+| Input | `01_Klant`, `02_Input_IB`, `03_Input_JR`, `04_Vermogen`, `05_Historie`, `06_Latente` | Gestandaardiseerde brondata |
+| Verwerking | `10_Berekeningen` | KPI's, ratio's, partner-consolidatie, latentie-correctie |
+| Output | `20_Dashboard`, `21_Scenario` | Premium dashboard + financiële planning |
+| Config/QA | `90_Config`, `91_Mapping`, `99_Controles` | Keuzelijsten, mapping, controles |
 
-**Datastroom:** `02–04 Input → 04 feitentabel → 11 Berekeningen → 20 Dashboard / 21 Scenario`,
-bewaakt door `99_Controles`, gevoed door `90_Config` + `91_Mapping`.
+## Kernbeslissingen
 
-## Kernontwerpbeslissingen
+- **Genormaliseerde feitentabel** (`04_Vermogen`): één regel per component met
+  `Eigenaar` (Klant/Partner/Gezamenlijk), `Aandeel klant %`, `Box` en `Latente %`.
+  Alle KPI's zijn `SUMIFS`/`SUMPRODUCT` hierover → schaalbaar zonder herbouw.
+- **Latente belastingen** geïntegreerd via de kolom `Latente %` (bv. lijfrente 37%,
+  AB-aandelen 31%) → gecorrigeerd nettovermogen ná belastinglatentie.
+- **Eén partnerschakelaar** (START) stuurt het hele bestand; drie totalen
+  (Klant / Partner / Gezamenlijk).
+- **Ingebouwde reconciliaties** (`99_Controles`): box 3 monitor ↔ aangifte,
+  balans-evenwicht jaarrekening, AB-waarde ↔ eigen vermogen BV, partnersplitsing.
+- **Alleen breed-ondersteunde functies** (`SUMIFS`, `SUMPRODUCT`, `IF`, `IFERROR`) —
+  geen `XLOOKUP`/spill-functies → maximale compatibiliteit.
 
-- **Genormaliseerde feitentabel** (`04_Input_Vermogen`): één regel per vermogenscomponent,
-  met `Eigenaar` (Klant/Partner/Gezamenlijk) en `Aandeel klant %`. Alle KPI's zijn
-  `SUMIFS`/`SUMPRODUCT` hierover → onbeperkt uitbreidbaar zonder herbouw.
-- **Eén partnerschakelaar** (`Heeft_Partner` op `START`) stuurt het hele bestand;
-  levert altijd drie totalen: Klant / Partner / Gezamenlijk.
-- **Centrale configuratie**: categorieën, boxen, fiscale parameters en mapping op één plek
-  → 1× per jaar bijwerken, geldt voor alle klanten.
-- **Ingebouwde reconciliaties**: box 3 (monitor ↔ aangifte), balans-evenwicht,
-  AB-waarde ↔ eigen vermogen BV, partnersplitsing, tekencontrole.
-- **Alleen breed-ondersteunde functies** (`SUMIFS`, `SUMPRODUCT`, `IF`, `IFERROR`,
-  `TEXT`, `ABS`) — geen `XLOOKUP`/spill-functies → maximale compatibiliteit.
+## Dashboard (`20_Dashboard`)
 
-## Belangrijke aannames
+- 8 KPI-cards met icon-chips: nettovermogen (+Δ t.o.v. vorig jaar), bezittingen,
+  schulden, na latentie, privévermogen, onderneming (box 2), liquiditeit, LTV.
+- Doughnut *vermogensverdeling*, solvabiliteits-*gauge*, *area-chart* ontwikkeling.
+- Tabel belangrijkste posten met progress-bars, signalen-paneel.
+- Print-klaar (liggend, 1 pagina).
 
-- Alle bedragen in het bestand zijn **fictieve voorbeelddata** (geanonimiseerd DGA-huishouden
-  met partner) ter demonstratie. Vervang de blauwe/gele invoercellen door klantdata.
-- Fiscale parameters op `90_Config` zijn **voorbeeldwaarden** — jaarlijks actualiseren.
-- Het is een **MVP (fase 1, handmatige invoer)**. Power Query-import van IB/jaarrekening,
-  volledige historie en uitgebreide scenario's zijn **fase 2**.
+## Scenario (`21_Scenario`)
+
+- Meerjaren-projectie: basis / optimistisch / conservatief (aanpasbare aannames).
+- Eenmalige scenario-events: verkoop onderneming, dividend, schenking, extra
+  aflossing, overlijden (erfbelasting) — elk met effect op nettovermogen.
 
 ## Gebruik
 
-1. Open in **Microsoft Excel**. Formules herberekenen automatisch bij openen
-   (het bestand wordt zonder cache-waarden gegenereerd; Excel doet een volledige
-   herberekening bij de eerste keer openen).
-2. Vul op `START`: klantnaam, peildatum en **Heeft partner? (JA/NEE)**.
-3. Vul de blauwe/gele cellen op `01`–`05` (dropdowns via `90_Config`).
-4. Controleer `99_Controles` (OK = groen).
+1. Open in **Microsoft Excel** — formules herberekenen automatisch bij openen.
+2. Vul op `START`: klantnaam, peildatum, fiscaal partner (Ja/Nee).
+3. Vul de gele invoervelden op `01`–`06` (dropdowns via `90_Config`).
+4. Controleer `99_Controles` (alles groen).
 5. Bespreek `20_Dashboard` en `21_Scenario` met de klant.
 
-## Genereren / reproduceren
-
-Het bestand wordt programmatisch opgebouwd met `openpyxl`:
+## Reproduceren
 
 ```bash
-python build_vermogensmonitor.py
+python build_v2.py     # Premium (v2)
+python build_vermogensmonitor.py   # Concept (v1)
 ```
 
-> Let op: automatische recalculatie via LibreOffice is in deze omgeving niet
-> beschikbaar (de LibreOffice-import is defect). Formules zijn statisch
-> gevalideerd (0 losse scheidingstekens, alle named ranges gedefinieerd, alle
-> sheet-referenties geldig) en de kernbedragen zijn handmatig geverifieerd.
-> Excel berekent alles bij openen.
+> Alle bedragen zijn **fictieve voorbeelddata** (geanonimiseerd DGA-huishouden).
+> Fiscale parameters op `90_Config` zijn voorbeeldwaarden — jaarlijks actualiseren.
+> Automatische recalculatie via LibreOffice is in de bouwomgeving niet beschikbaar;
+> formules zijn statisch gevalideerd (0 losse scheidingstekens, alle named ranges
+> gedefinieerd, alle sheet-referenties geldig) en de kernbedragen + reconciliaties
+> zijn handmatig geverifieerd. Excel berekent alles bij openen.
