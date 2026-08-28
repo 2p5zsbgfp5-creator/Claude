@@ -138,6 +138,22 @@
   .stat .n{font-size:26px; font-weight:800}
   .stat .l{font-size:11px; color:var(--muted); margin-top:2px}
 
+  /* ---- lichaam / BMI ---- */
+  .bmibox{display:flex; align-items:center; gap:16px}
+  .bmi-main{flex:0 0 auto; text-align:center; min-width:96px; padding:10px 14px; border-radius:14px; background:var(--panel2); border:1px solid var(--line2)}
+  .bmi-n{font-size:34px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; color:var(--bmi-col,var(--txt))}
+  .bmi-lbl{font-size:11px; color:var(--muted); letter-spacing:1px; margin-top:3px}
+  .bmi-side{min-width:0}
+  .bmi-cat{display:inline-block; font-size:13px; font-weight:700; padding:4px 10px; border-radius:20px;
+    background:var(--panel2); color:var(--bmi-col,var(--muted)); border:1px solid var(--line2)}
+  .bmi-doel{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.4}
+  .meting{display:flex; align-items:center; gap:10px; padding:10px 2px; border-top:1px solid var(--line)}
+  .meting:first-child{border-top:none}
+  .meting .dt{color:var(--faint); font-size:12px; flex:1; font-variant-numeric:tabular-nums}
+  .meting .kg{font-weight:700; font-variant-numeric:tabular-nums}
+  .meting .dl{font-size:12px; font-variant-numeric:tabular-nums; width:56px; text-align:right}
+  .meting .dl.up{color:var(--danger)} .meting .dl.down{color:var(--accent)}
+  .meting .x{font-size:16px}
   .toggle{display:flex; align-items:center; justify-content:space-between; padding:14px 2px; border-top:1px solid var(--line)}
   .toggle:first-child{border-top:none}
   .sw{width:50px; height:30px; border-radius:20px; background:var(--panel2); border:1px solid var(--line2); position:relative; transition:background .15s; flex:0 0 auto}
@@ -269,6 +285,38 @@
       <div class="heat" id="heat-wd"></div>
       <div class="heat" id="heat" style="margin-top:6px"></div>
     </div>
+    <h2 class="section">Lichaam &amp; gewicht</h2>
+    <div class="card">
+      <div class="bmibox">
+        <div class="bmi-main">
+          <div class="bmi-n" id="bmi-n">–</div>
+          <div class="bmi-lbl">BMI</div>
+        </div>
+        <div class="bmi-side">
+          <span class="bmi-cat" id="bmi-cat">Vul lengte en gewicht in</span>
+          <div class="bmi-doel" id="bmi-doel"></div>
+        </div>
+      </div>
+      <div class="row" style="gap:10px; margin-top:14px">
+        <div class="fld grow" style="margin:0">
+          <label>Lengte (cm)</label>
+          <input id="lc-lengte" type="number" inputmode="numeric" min="0" placeholder="180" />
+        </div>
+        <div class="fld grow" style="margin:0">
+          <label>Streefgewicht (kg)</label>
+          <input id="lc-streef" type="number" inputmode="decimal" min="0" step="0.1" placeholder="78" />
+        </div>
+      </div>
+      <div class="row" style="gap:10px; margin-top:12px; align-items:flex-end">
+        <div class="fld grow" style="margin:0">
+          <label>Huidig gewicht (kg)</label>
+          <input id="lc-gewicht" type="number" inputmode="decimal" min="0" step="0.1" placeholder="82" />
+        </div>
+        <button class="btn" id="lc-log" style="flex:0 0 auto">＋ Meting</button>
+      </div>
+      <div id="lc-metingen" style="margin-top:14px"></div>
+    </div>
+
     <h2 class="section">Instellingen</h2>
     <div class="card" style="padding:4px 16px">
       <div class="toggle"><span>🔊 Geluid</span><div class="sw" id="sw-geluid"></div></div>
@@ -380,14 +428,27 @@
       <label>Instructie / toelichting</label>
       <textarea id="ms-instr" placeholder="Korte uitleg (optioneel)"></textarea>
     </div>
-    <div class="row" id="ms-times" style="gap:10px">
-      <div class="fld grow">
-        <label>Werk (sec)</label>
-        <input id="ms-werk" type="number" inputmode="numeric" min="0" placeholder="45" />
+    <div id="ms-times">
+      <div class="fld">
+        <label>Meten op</label>
+        <select id="ms-modus">
+          <option value="tijd">Tijd — aftellen in seconden</option>
+          <option value="reps">Herhalingen — jij tikt “Klaar”</option>
+        </select>
       </div>
-      <div class="fld grow">
-        <label>Rust erna (sec)</label>
-        <input id="ms-rust" type="number" inputmode="numeric" min="0" placeholder="15" />
+      <div class="row" style="gap:10px">
+        <div class="fld grow" id="ms-werk-wrap">
+          <label>Werk (sec)</label>
+          <input id="ms-werk" type="number" inputmode="numeric" min="0" placeholder="45" />
+        </div>
+        <div class="fld grow" id="ms-reps-wrap">
+          <label>Herhalingen</label>
+          <input id="ms-reps" type="number" inputmode="numeric" min="0" placeholder="20" />
+        </div>
+        <div class="fld grow">
+          <label>Rust erna (sec)</label>
+          <input id="ms-rust" type="number" inputmode="numeric" min="0" placeholder="15" />
+        </div>
       </div>
     </div>
     <div class="fld" id="ms-tijd-wrap">
@@ -505,6 +566,7 @@ function defaultData(){
       {id:uid(), tekst:"Sportschema uitbreiden", icoon:"🏋️", context:"Na 2 weken een zwaardere routine opbouwen.", termijn:"lang", klaar:false, vervaldatum:""},
     ],
     voortgang: { sessies: [], streakLangste: 0 },
+    lichaam: { lengteCm:null, streefKg:null, metingen:[] }, // metingen: [{datum, kg}]
     instellingen: { geluid:true, trillen:true },
     // per-dag voltooiing van routines: { "2026-08-28": [routineId,...] }
     voltooid: {}
@@ -523,6 +585,8 @@ function load(){
   D.routines ||= []; D.taken ||= [];
   D.voortgang ||= {sessies:[], streakLangste:0};
   D.instellingen ||= {geluid:true, trillen:true};
+  D.lichaam ||= {lengteCm:null, streefKg:null, metingen:[]};
+  if(!Array.isArray(D.lichaam.metingen)) D.lichaam.metingen = [];
   D.voltooid ||= {};
   // migratie: routine.dagelijks (boolean) -> routine.dagen (weekdag-indices, ma=0..zo=6)
   D.routines.forEach(r=>{
@@ -544,8 +608,11 @@ function fmtDateNL(d){
 }
 function routineDuration(r){
   if(r.type!=="timer") return r.stappen.length + " stappen";
-  const tot = r.stappen.reduce((a,s)=>a+(+s.werkSec||0)+(+s.rustSec||0),0);
-  const m = Math.round(tot/60);
+  const tot = r.stappen.reduce((a,s)=>{
+    const werk = s.modus==="reps" ? (+s.reps||0)*2 : (+s.werkSec||0); // reps ~2s p/st. voor schatting
+    return a + werk + (+s.rustSec||0);
+  },0);
+  const m = Math.max(1, Math.round(tot/60));
   return "≈ " + m + " min · " + r.stappen.length + " oef.";
 }
 function isDoneToday(routineId){
@@ -716,11 +783,13 @@ let W = null; // {routine, seq[], idx, remaining, paused, timer}
 function buildSequence(r){
   const seq = [];
   r.stappen.forEach((s,i)=>{
-    seq.push({phase:"work", step:s, dur:+s.werkSec||0, idx:i});
+    const isReps = s.modus==="reps";
+    seq.push({phase:"work", step:s, dur:isReps?0:(+s.werkSec||0), reps:isReps, idx:i});
     if((+s.rustSec||0) > 0 && i < r.stappen.length-1)
       seq.push({phase:"rest", step:r.stappen[i+1], dur:+s.rustSec, idx:i, prep:true});
   });
-  return seq.filter(x=>x.dur>0);
+  // houd rust alleen bij dur>0; werk-stappen altijd (reps hebben geen dur)
+  return seq.filter(x=> x.phase==="rest" ? x.dur>0 : (x.reps || x.dur>0));
 }
 function startWorkout(r){
   if(!r.stappen.length){ flash("Deze routine heeft nog geen stappen."); return; }
@@ -735,12 +804,18 @@ function startWorkout(r){
 function runTimer(){
   clearInterval(W.timer);
   W.timer = setInterval(()=>{
-    if(W.paused) return;
+    const cur = W.seq[W.idx];
+    if(W.paused || cur.reps) return; // reps: geen aftellen, wacht op "Klaar"
     W.remaining--;
     if(W.remaining <= 0){ nextWorkStep(); return; }
     if(W.remaining <= 3){ cueTick(); buzz(20); }
     paintTime();
   },1000);
+}
+function updateMainButton(){
+  const cur = W.seq[W.idx];
+  if(cur.reps) $("#ov-pause").textContent = "✓ Klaar";
+  else $("#ov-pause").textContent = W.paused ? "▶ Hervat" : "⏸ Pauze";
 }
 function renderWorkStep(first){
   const cur = W.seq[W.idx];
@@ -748,10 +823,12 @@ function renderWorkStep(first){
   ov.classList.remove("work","rest","prep");
   const isRest = cur.phase==="rest";
   ov.classList.add(isRest?"rest":"work");
-  $("#ov-phase").textContent = isRest ? "Rust" : "Aan de slag";
+  $("#ov-phase").textContent = isRest ? "Rust" : (cur.reps ? "Doe je reps" : "Aan de slag");
   $("#ov-emoji").textContent = cur.step.emoji || (isRest?"😮‍💨":"💪");
   $("#ov-name").textContent = isRest ? ("Straks: "+cur.step.naam) : cur.step.naam;
-  $("#ov-instr").textContent = isRest ? "Even ademhalen…" : (cur.step.instructie||"");
+  $("#ov-instr").textContent = isRest ? "Even ademhalen…"
+    : (cur.reps ? ((cur.step.reps>0?("Doe "+cur.step.reps+" herhalingen"):"Zoveel als je kunt")+(cur.step.instructie?" — "+cur.step.instructie:"")) : (cur.step.instructie||""));
+  updateMainButton();
   // volgende
   const nx = W.seq[W.idx+1];
   $("#ov-next").textContent = nx ? ("Hierna: "+(nx.phase==="rest"?"rust":nx.step.naam)) : "Laatste! 💥";
@@ -764,6 +841,12 @@ function renderWorkStep(first){
 }
 function paintTime(){
   const cur = W.seq[W.idx];
+  if(cur.reps){
+    $("#ov-time").textContent = (cur.step.reps>0 ? cur.step.reps+"×" : "∞");
+    $("#ov-ring").style.setProperty("--p", 100);
+    $("#ov-bar").style.width = (W.idx / W.seq.length * 100) + "%";
+    return;
+  }
   $("#ov-time").textContent = W.remaining;
   const p = cur.dur>0 ? ((cur.dur-W.remaining)/cur.dur*100) : 0;
   $("#ov-ring").style.setProperty("--p", p);
@@ -794,8 +877,10 @@ function closeOverlay(){
 }
 $("#ov-close").onclick = ()=>{ if(confirm("Training stoppen? Voortgang van deze sessie gaat verloren.")) closeOverlay(); };
 $("#ov-pause").onclick = ()=>{
+  const cur = W.seq[W.idx];
+  if(cur.reps){ cueTick(); buzz(30); nextWorkStep(); return; } // reps klaar -> volgende
   W.paused = !W.paused;
-  $("#ov-pause").textContent = W.paused ? "▶ Hervat" : "⏸ Pauze";
+  updateMainButton();
 };
 $("#ov-skip").onclick = ()=>nextWorkStep();
 $("#ov-prev").onclick = ()=>prevWorkStep();
@@ -871,7 +956,9 @@ function renderModalSteps(){
     const row = document.createElement("div");
     row.className="stepedit";
     const detail = isTimer
-      ? `${s.werkSec||0}s werk · ${s.rustSec||0}s rust`
+      ? (s.modus==="reps"
+          ? `${s.reps||0}× herhalingen · ${s.rustSec||0}s rust`
+          : `${s.werkSec||0}s werk · ${s.rustSec||0}s rust`)
       : (s.tijd ? ("🕒 "+esc(s.tijd)) : "afvinken");
     row.innerHTML = `
       <span class="mv" data-up>▲</span><span class="mv" data-dn>▼</span>
@@ -912,34 +999,46 @@ $("#mr-save").onclick = ()=>{
 
 /* ---- step modal ---- */
 let editStepIdx = -1;
+function updateStepModusUI(){
+  const reps = $("#ms-modus").value==="reps";
+  $("#ms-werk-wrap").style.display = reps ? "none" : "";
+  $("#ms-reps-wrap").style.display = reps ? "" : "none";
+}
 function openStepModal(i){
   editStepIdx = i;
   const isTimer = editR.type==="timer";
   $("#ms-times").style.display = isTimer ? "" : "none";
   $("#ms-tijd-wrap").style.display = isTimer ? "none" : "";
-  const s = i>=0 ? editR.stappen[i] : {naam:"",emoji:"",instructie:"",werkSec:45,rustSec:15,tijd:""};
+  const s = i>=0 ? editR.stappen[i] : {naam:"",emoji:"",instructie:"",modus:"tijd",werkSec:45,reps:20,rustSec:15,tijd:""};
   $("#ms-title").textContent = i>=0 ? "Stap bewerken" : "Nieuwe stap";
   $("#ms-emoji").value = s.emoji||"";
   $("#ms-naam").value = s.naam||"";
   $("#ms-instr").value = s.instructie||"";
+  $("#ms-modus").value = s.modus==="reps" ? "reps" : "tijd";
   $("#ms-werk").value = s.werkSec!=null?s.werkSec:45;
+  $("#ms-reps").value = s.reps!=null?s.reps:20;
   $("#ms-rust").value = s.rustSec!=null?s.rustSec:15;
   $("#ms-tijd").value = s.tijd||"";
+  updateStepModusUI();
   $("#ms-delete").style.display = i>=0 ? "" : "none";
   showModal("modal-step");
 }
+$("#ms-modus").onchange = updateStepModusUI;
 $("#ms-cancel").onclick = ()=>hideModal("modal-step");
 $("#ms-delete").onclick = ()=>{
   if(editStepIdx>=0){ editR.stappen.splice(editStepIdx,1); }
   hideModal("modal-step"); renderModalSteps();
 };
 $("#ms-save").onclick = ()=>{
+  const modus = $("#ms-modus").value==="reps" ? "reps" : "tijd";
   const s = {
     id: editStepIdx>=0 ? editR.stappen[editStepIdx].id : uid(),
     naam: $("#ms-naam").value.trim() || "Naamloze stap",
     emoji: $("#ms-emoji").value.trim(),
     instructie: $("#ms-instr").value.trim(),
+    modus,
     werkSec: Math.max(0, parseInt($("#ms-werk").value)||0),
+    reps: Math.max(0, parseInt($("#ms-reps").value)||0),
     rustSec: Math.max(0, parseInt($("#ms-rust").value)||0),
     tijd: $("#ms-tijd").value.trim()
   };
@@ -1070,7 +1169,75 @@ function renderVoortgang(){
   }
   $("#heat").innerHTML = html;
   $("#heat-month").textContent = today.toLocaleDateString("nl-NL",{month:"long", year:"numeric"});
+  renderLichaam();
 }
+
+/* ---- lichaam / gewicht / BMI ---- */
+function laatsteGewicht(){
+  const m = D.lichaam.metingen;
+  return m.length ? m[m.length-1].kg : null;
+}
+function bmiCategorie(bmi){
+  if(bmi < 18.5) return {txt:"Ondergewicht", col:"var(--rest)"};
+  if(bmi < 25)   return {txt:"Gezond gewicht", col:"var(--accent)"};
+  if(bmi < 30)   return {txt:"Overgewicht", col:"var(--warn)"};
+  return {txt:"Obesitas", col:"var(--danger)"};
+}
+function renderLichaam(){
+  const L = D.lichaam;
+  if(document.activeElement!==$("#lc-lengte")) $("#lc-lengte").value = L.lengteCm!=null?L.lengteCm:"";
+  if(document.activeElement!==$("#lc-streef")) $("#lc-streef").value = L.streefKg!=null?L.streefKg:"";
+  const kg = laatsteGewicht();
+  const bmiEl=$("#bmi-n"), catEl=$("#bmi-cat"), doelEl=$("#bmi-doel");
+  if(L.lengteCm>0 && kg>0){
+    const m = L.lengteCm/100;
+    const bmi = kg/(m*m);
+    const cat = bmiCategorie(bmi);
+    bmiEl.textContent = bmi.toFixed(1);
+    bmiEl.style.setProperty("--bmi-col", cat.col);
+    catEl.textContent = cat.txt;
+    catEl.style.setProperty("--bmi-col", cat.col);
+  } else {
+    bmiEl.textContent = "–"; bmiEl.style.removeProperty("--bmi-col");
+    catEl.textContent = "Vul lengte en gewicht in"; catEl.style.removeProperty("--bmi-col");
+  }
+  if(L.streefKg>0 && kg>0){
+    const diff = +(kg - L.streefKg).toFixed(1);
+    if(Math.abs(diff) < 0.05) doelEl.textContent = "🎯 Je zit op je streefgewicht!";
+    else if(diff>0) doelEl.textContent = "Nog "+diff+" kg tot je streefgewicht ("+L.streefKg+" kg).";
+    else doelEl.textContent = Math.abs(diff)+" kg onder je streefgewicht ("+L.streefKg+" kg).";
+  } else doelEl.textContent = "";
+  // metingen (nieuwste boven, max 8)
+  const host=$("#lc-metingen"); host.innerHTML="";
+  const m = L.metingen;
+  if(m.length===0){
+    host.innerHTML = `<div class="small faint" style="padding:4px 2px">Nog geen metingen. Vul je gewicht in en tik “＋ Meting”.</div>`;
+    return;
+  }
+  for(let i=m.length-1; i>=0 && i>m.length-9; i--){
+    const cur=m[i], prev=m[i-1];
+    let dl="";
+    if(prev){ const d=+(cur.kg-prev.kg).toFixed(1); dl=`<span class="dl ${d>0?'up':d<0?'down':''}">${d>0?'+':''}${d} kg</span>`; }
+    const dt = new Date(cur.datum).toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"});
+    const row=document.createElement("div");
+    row.className="meting";
+    row.innerHTML=`<span class="kg">${cur.kg} kg</span><span class="dt">${dt}</span>${dl}<button class="x" data-i="${i}">✕</button>`;
+    row.querySelector(".x").onclick=()=>{ D.lichaam.metingen.splice(i,1); save(); renderLichaam(); };
+    host.appendChild(row);
+  }
+}
+$("#lc-lengte").addEventListener("input", ()=>{ D.lichaam.lengteCm = parseFloat($("#lc-lengte").value)||null; save(); renderLichaam(); });
+$("#lc-streef").addEventListener("input", ()=>{ D.lichaam.streefKg = parseFloat($("#lc-streef").value)||null; save(); renderLichaam(); });
+$("#lc-log").onclick = ()=>{
+  const kg = parseFloat($("#lc-gewicht").value);
+  if(!(kg>0)){ flash("Vul een gewicht in"); return; }
+  const t = todayISO();
+  const bestaand = D.lichaam.metingen.find(x=>x.datum===t);
+  if(bestaand) bestaand.kg = +kg.toFixed(1);
+  else D.lichaam.metingen.push({datum:t, kg:+kg.toFixed(1)});
+  D.lichaam.metingen.sort((a,b)=> a.datum<b.datum?-1:1);
+  $("#lc-gewicht").value=""; save(); renderLichaam(); buzz(20); flash("Meting opgeslagen ✓");
+};
 
 /* ---- settings ---- */
 $("#sw-geluid").onclick = function(){ D.instellingen.geluid=!D.instellingen.geluid; this.classList.toggle("on",D.instellingen.geluid); save(); if(D.instellingen.geluid) cueWork(); };

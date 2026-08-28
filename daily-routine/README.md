@@ -11,7 +11,8 @@ bij te houden. Geen account, geen backend: alles draait offline en de data blijf
   en de taken die spelen.
 - **Trainingsmodus** — een volledig-scherm intervaltimer die je door elke oefening loodst:
   werk-/rustblokken, groot aftellen, voortgangsbalk, geluids- en trilsignalen. Bij afronden
-  gaat je streak omhoog.
+  gaat je streak omhoog. Oefeningen kunnen op **tijd** (aftellen) óf op **herhalingen** — bij
+  reps toont het scherm je doel (bijv. 20×) en tik je zelf **Klaar** om door te gaan.
 - **Routines** — twee soorten, allebei aan te maken/bewerken/verwijderen:
   - **Timer** (circuit met tijden), bijv. de meegeleverde *Military Ochtend (≈10 min)*.
   - **Checklist** (afvinken zonder timer), bijv. de meegeleverde *Avond voorbereiding*
@@ -23,7 +24,9 @@ bij te houden. Geen account, geen backend: alles draait offline en de data blijf
   een icoon, een context/toelichting en een optionele vervaldatum; afvinken laat een taak
   naar onderen zakken. De ＋-knop opent een bewerk-scherm; tik op een taak om die aan te passen.
 - **Voortgang** — huidige & langste streak, totaal sessies, en een heatmap van gedane dagen.
-  Hier zitten ook de instellingen (geluid/trillen) en een backup-export.
+  Hier houd je ook **Lichaam & gewicht** bij: lengte (cm), gewicht (kg), automatische **BMI**
+  met categorie, en je **streefgewicht** — met een meet-logboek zodat je je gewicht over tijd
+  volgt. Verder de instellingen (geluid/trillen) en een backup-export.
 
 De meegeleverde *Military Ochtend* is een startpunt — pas oefeningen, tijden en volgorde
 gerust aan, of maak je eigen niveaus op naarmate je fitter wordt.
