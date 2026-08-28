@@ -1,7 +1,7 @@
 {
-  "name": "Ochtend Drill",
-  "short_name": "Drill",
-  "description": "Dagelijkse military-style ochtendroutine, eigen routines en takenlijst.",
+  "name": "Planning",
+  "short_name": "Planning",
+  "description": "Routines, taken, weekmenu en voortgang — alles lokaal op je apparaat.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

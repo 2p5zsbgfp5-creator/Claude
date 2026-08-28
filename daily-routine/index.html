@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#0d1411" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Ochtend Drill" />
+<meta name="apple-mobile-web-app-title" content="Planning" />
 <link rel="manifest" href="manifest.json" />
-<title>Ochtend Drill</title>
+<title>Planning</title>
 <style>
   :root{
     --bg:#0d1411; --bg2:#121b16; --panel:#16211b; --panel2:#1c2b23;
@@ -37,9 +37,7 @@
 
   /* ---- header ---- */
   header{padding:calc(var(--safe-t) + 16px) 18px 6px; display:flex; align-items:baseline; justify-content:space-between}
-  header .logo{font-weight:800; letter-spacing:.5px; font-size:20px}
-  header .logo b{color:var(--accent)}
-  header .date{color:var(--muted); font-size:13px; font-variant:small-caps; letter-spacing:.4px}
+  header .date{color:var(--muted); font-size:14px; font-variant:small-caps; letter-spacing:.4px; text-transform:capitalize}
 
   .view{padding:6px 16px 8px; display:none; animation:fade .18s ease}
   .view.active{display:block}
@@ -264,7 +262,6 @@
 <body>
 <div id="app">
   <header>
-    <div class="logo">OCHTEND <b>DRILL</b></div>
     <div class="date" id="today-date"></div>
   </header>
 
@@ -371,7 +368,7 @@
     </div>
     <button class="btn ghost block" id="export-btn" style="margin-bottom:10px">⬇︎ Backup exporteren</button>
     <button class="btn danger block" id="reset-btn">Alles wissen</button>
-    <p class="center faint small" style="margin-top:18px">Ochtend Drill · data blijft lokaal op dit apparaat</p>
+    <p class="center faint small" style="margin-top:18px">Data blijft lokaal op dit apparaat</p>
   </section>
 
   <nav class="tabs">
@@ -587,7 +584,7 @@
 <script>
 "use strict";
 /* ============================================================
-   Ochtend Drill — self-contained routine & taken app
+   Planning — self-contained routine & taken app
    Data: localStorage. Geen backend, werkt offline.
 ============================================================ */
 
@@ -1468,7 +1465,7 @@ $("#export-btn").onclick = ()=>{
     const blob = new Blob([JSON.stringify(D,null,2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href=url; a.download="ochtenddrill-backup-"+todayISO()+".json";
+    a.href=url; a.download="backup-"+todayISO()+".json";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 2000);
     flash("Backup gedownload");

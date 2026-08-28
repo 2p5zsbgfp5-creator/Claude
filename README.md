@@ -1,7 +1,7 @@
 > **Let op — deze repo bevat twee losse projecten:**
 > 1. **Vermogensmonitor** (Excel/Python) — hieronder beschreven.
-> 2. **[Ochtend Drill](daily-routine/)** — een mobiele web-app voor een dagelijkse
->    ochtendroutine, eigen routines en een takenlijst. Zie [`daily-routine/`](daily-routine/).
+> 2. **[Planning](daily-routine/)** — een mobiele web-app voor dagelijkse routines,
+>    taken, een weekmenu en voortgang. Zie [`daily-routine/`](daily-routine/).
 
 # Vermogensmonitor Premium — geïntegreerd standaardbestand
 

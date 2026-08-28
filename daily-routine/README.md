@@ -1,9 +1,9 @@
-# Ochtend Drill 🔥
+# Planning 🔥
 
-Een simpele, mobielvriendelijke web-app om elke ochtend een korte (max. ~10 min)
-military-style oefenroutine te doen — en om daarnaast eigen routines en een takenlijst
-bij te houden. Geen account, geen backend: alles draait offline en de data blijft
-**lokaal op je apparaat** (`localStorage`).
+Een simpele, mobielvriendelijke web-app voor je dagelijkse routines (met een korte,
+max. ~10 min oefenroutine), een takenlijst, een weekmenu en je voortgang. Geen account,
+geen backend: alles draait offline en de data blijft **lokaal op je apparaat**
+(`localStorage`).
 
 ## Wat kan het
 
