@@ -227,6 +227,7 @@
   .modal{position:fixed; inset:0; z-index:90; background:rgba(0,0,0,.6); display:none;
     align-items:flex-end; justify-content:center}
   .modal.show{display:flex}
+  #modal-confirm{z-index:130} /* boven de workout-overlay (100) en flash (120) */
   .sheet{background:var(--bg2); border:1px solid var(--line2); border-radius:20px 20px 0 0;
     width:100%; max-width:560px; max-height:92vh; overflow:auto; padding:20px 18px calc(var(--safe-b) + 24px)}
   .sheet h3{margin:2px 0 16px; font-size:18px}
@@ -575,6 +576,19 @@
       <button class="btn danger" id="mg-delete">Verwijderen</button>
       <button class="btn ghost grow" id="mg-cancel">Annuleer</button>
       <button class="btn grow" id="mg-save">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Bevestiging modal ===== -->
+<div class="modal" id="modal-confirm">
+  <div class="sheet" style="max-width:420px">
+    <div class="grabber"></div>
+    <h3 id="mc-title">Weet je het zeker?</h3>
+    <p id="mc-msg" class="muted" style="margin:0 0 20px; font-size:15px; line-height:1.45"></p>
+    <div class="row" style="gap:10px">
+      <button class="btn ghost grow" id="mc-cancel">Annuleer</button>
+      <button class="btn grow" id="mc-ok" style="background:var(--danger); color:#2a0b0b">Verwijderen</button>
     </div>
   </div>
 </div>
@@ -960,7 +974,7 @@ function closeOverlay(){
   $("#overlay").classList.remove("show");
   document.body.style.overflow="";
 }
-$("#ov-close").onclick = ()=>{ if(confirm("Training stoppen? Voortgang van deze sessie gaat verloren.")) closeOverlay(); };
+$("#ov-close").onclick = ()=>{ confirmDialog("Training stoppen? Voortgang van deze sessie gaat verloren.", "Stoppen", closeOverlay); };
 $("#ov-pause").onclick = ()=>{
   const cur = W.seq[W.idx];
   if(cur.reps){ cueTick(); buzz(30); nextWorkStep(); return; } // reps klaar -> volgende
@@ -1066,10 +1080,10 @@ $("#mr-elke-dag").onclick = ()=>{ editR.dagen=[0,1,2,3,4,5,6]; renderDayChips();
 $("#mr-geen-dag").onclick = ()=>{ editR.dagen=[]; renderDayChips(); };
 $("#mr-cancel").onclick = ()=>hideModal("modal-routine");
 $("#mr-delete").onclick = ()=>{
-  if(confirm("Deze routine verwijderen?")){
+  confirmDialog("Deze routine verwijderen?", "Verwijderen", ()=>{
     D.routines = D.routines.filter(r=>r.id!==editR.id); save();
     hideModal("modal-routine"); renderRoutines(); flash("Routine verwijderd");
-  }
+  });
 };
 $("#mr-save").onclick = ()=>{
   editR.naam = $("#mr-naam").value.trim() || "Naamloze routine";
@@ -1456,9 +1470,9 @@ $("#lc-log").onclick = ()=>{
 $("#sw-geluid").onclick = function(){ D.instellingen.geluid=!D.instellingen.geluid; this.classList.toggle("on",D.instellingen.geluid); save(); if(D.instellingen.geluid) cueWork(); };
 $("#sw-trillen").onclick = function(){ D.instellingen.trillen=!D.instellingen.trillen; this.classList.toggle("on",D.instellingen.trillen); save(); buzz(30); };
 $("#reset-btn").onclick = ()=>{
-  if(confirm("Alle routines, taken én voortgang wissen? Dit kan niet ongedaan worden.")){
+  confirmDialog("Alle routines, taken én voortgang wissen? Dit kan niet ongedaan worden.", "Alles wissen", ()=>{
     D = defaultData(); save(); switchView("vandaag"); flash("Alles gereset");
-  }
+  });
 };
 $("#export-btn").onclick = ()=>{
   try{
@@ -1477,7 +1491,18 @@ $("#export-btn").onclick = ()=>{
 ============================================================ */
 function showModal(id){ $("#"+id).classList.add("show"); }
 function hideModal(id){ $("#"+id).classList.remove("show"); }
-$$(".modal").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) m.classList.remove("show"); }));
+$$(".modal").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m){ m.classList.remove("show"); if(m.id==="modal-confirm") confirmCb=null; } }));
+
+/* eigen bevestiging (browser-confirm werkt niet in de afgeschermde Artifact-iframe) */
+let confirmCb = null;
+function confirmDialog(msg, okLabel, onOk){
+  $("#mc-msg").textContent = msg;
+  $("#mc-ok").textContent = okLabel || "OK";
+  confirmCb = onOk;
+  showModal("modal-confirm");
+}
+$("#mc-cancel").onclick = ()=>{ confirmCb=null; hideModal("modal-confirm"); };
+$("#mc-ok").onclick = ()=>{ const cb=confirmCb; confirmCb=null; hideModal("modal-confirm"); if(cb) cb(); };
 function swap(a,i,j){ [a[i],a[j]]=[a[j],a[i]]; }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function capital(s){ return s?s.charAt(0).toUpperCase()+s.slice(1):""; }
