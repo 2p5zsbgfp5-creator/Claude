@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#0d1411" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Ochtend Drill" />
+<link rel="manifest" href="manifest.json" />
+<title>Ochtend Drill</title>
+<style>
+  :root{
+    --bg:#0d1411; --bg2:#121b16; --panel:#16211b; --panel2:#1c2b23;
+    --line:#26382e; --line2:#2f4a3b;
+    --txt:#e7f0ea; --muted:#8ba79a; --faint:#5f7a6d;
+    --accent:#1ce175; --accent-d:#0c5f42; --accent-soft:#123f2c;
+    --warn:#ffb020; --danger:#ff5c5c; --rest:#2f80ff;
+    --radius:16px; --radius-s:11px;
+    --safe-b:env(safe-area-inset-bottom,0px);
+    --safe-t:env(safe-area-inset-top,0px);
+    --tabh:66px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; padding:0; height:100%}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; overscroll-behavior-y:none;
+  }
+  button{font-family:inherit; cursor:pointer; border:none; color:inherit; background:none}
+  input,select,textarea{font-family:inherit; font-size:16px}
+  ::-webkit-scrollbar{width:0; height:0}
+
+  #app{max-width:560px; margin:0 auto; min-height:100%; position:relative;
+       padding-bottom:calc(var(--tabh) + var(--safe-b) + 12px)}
+
+  /* ---- header ---- */
+  header{padding:calc(var(--safe-t) + 16px) 18px 6px; display:flex; align-items:baseline; justify-content:space-between}
+  header .logo{font-weight:800; letter-spacing:.5px; font-size:20px}
+  header .logo b{color:var(--accent)}
+  header .date{color:var(--muted); font-size:13px; font-variant:small-caps; letter-spacing:.4px}
+
+  .view{padding:6px 16px 8px; display:none; animation:fade .18s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
+
+  h2.section{font-size:13px; text-transform:uppercase; letter-spacing:1.3px; color:var(--faint);
+             margin:22px 4px 10px; font-weight:700}
+  h2.section:first-child{margin-top:8px}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+        padding:16px; margin-bottom:12px}
+
+  /* ---- streak hero ---- */
+  .hero{background:linear-gradient(160deg,var(--accent-soft),var(--panel) 70%);
+        border:1px solid var(--line2); border-radius:var(--radius); padding:18px;
+        display:flex; align-items:center; gap:16px; margin-bottom:14px}
+  .flame{font-size:40px; line-height:1}
+  .hero .n{font-size:34px; font-weight:800; line-height:1}
+  .hero .lbl{color:var(--muted); font-size:13px; margin-top:2px}
+  .hero .r{margin-left:auto; text-align:right}
+  .hero .r .n2{font-size:20px; font-weight:800}
+  .hero .r .lbl{font-size:11px}
+
+  /* ---- routine card on Vandaag ---- */
+  .rt{display:flex; align-items:center; gap:14px}
+  .rt .ic{width:46px; height:46px; border-radius:12px; background:var(--panel2);
+          display:flex; align-items:center; justify-content:center; font-size:24px; flex:0 0 auto}
+  .rt .meta{min-width:0; flex:1}
+  .rt .meta .t{font-weight:700; font-size:16px}
+  .rt .meta .s{color:var(--muted); font-size:13px; margin-top:2px}
+  .badge{display:inline-block; font-size:11px; padding:2px 8px; border-radius:20px;
+         background:var(--panel2); color:var(--muted); border:1px solid var(--line); margin-left:6px}
+  .badge.done{background:var(--accent-soft); color:var(--accent); border-color:var(--accent-d)}
+
+  .btn{background:var(--accent); color:#04150c; font-weight:800; border-radius:12px;
+       padding:12px 16px; font-size:15px; display:inline-flex; align-items:center; gap:8px;
+       justify-content:center; transition:transform .06s ease, filter .15s ease}
+  .btn:active{transform:scale(.96)}
+  .btn.block{width:100%}
+  .btn.ghost{background:var(--panel2); color:var(--txt); border:1px solid var(--line2); font-weight:700}
+  .btn.sm{padding:9px 12px; font-size:13px; border-radius:10px}
+  .btn.danger{background:transparent; color:var(--danger); border:1px solid #4a2626}
+  .btn:disabled{opacity:.5; filter:grayscale(.4)}
+
+  .row{display:flex; gap:10px; align-items:center}
+  .grow{flex:1}
+  .muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:13px}
+  .center{text-align:center}
+
+  /* ---- checklist steps ---- */
+  .steps{list-style:none; margin:12px 0 0; padding:0}
+  .steps li{display:flex; align-items:center; gap:12px; padding:11px 4px; border-top:1px solid var(--line)}
+  .steps li:first-child{border-top:none}
+  .chk{width:26px; height:26px; border-radius:8px; border:2px solid var(--line2);
+       flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-size:15px; color:transparent}
+  .chk.on{background:var(--accent); border-color:var(--accent); color:#04150c}
+  .steps li.done .lbl{text-decoration:line-through; color:var(--faint)}
+  .steps .lbl{flex:1; font-size:15px}
+  .steps .tm{color:var(--faint); font-size:12px; font-variant-numeric:tabular-nums}
+
+  /* ---- tasks ---- */
+  .seg{display:flex; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:4px; gap:4px; margin-bottom:14px}
+  .seg button{flex:1; padding:9px; border-radius:9px; font-size:14px; font-weight:600; color:var(--muted)}
+  .seg button.on{background:var(--accent-soft); color:var(--accent)}
+  .task{display:flex; align-items:center; gap:12px; padding:13px 14px; background:var(--panel);
+        border:1px solid var(--line); border-radius:12px; margin-bottom:9px}
+  .task.done{opacity:.55}
+  .task .lbl{flex:1; font-size:15px}
+  .task.done .lbl{text-decoration:line-through}
+  .task .due{font-size:11px; color:var(--muted); margin-top:3px}
+  .task .due.over{color:var(--danger)} .task .due.soon{color:var(--warn)}
+  .x{color:var(--faint); font-size:20px; padding:2px 6px; flex:0 0 auto}
+
+  .add{display:flex; gap:8px; margin-bottom:14px}
+  .add input{flex:1; background:var(--panel); border:1px solid var(--line2); color:var(--txt);
+             border-radius:12px; padding:13px 14px; outline:none}
+  .add input:focus{border-color:var(--accent-d)}
+  .plus{width:48px; flex:0 0 auto; background:var(--accent); color:#04150c; border-radius:12px; font-size:24px; font-weight:800}
+
+  .empty{text-align:center; color:var(--faint); padding:30px 10px; font-size:14px}
+
+  /* ---- progress heatmap ---- */
+  .heat{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:6px}
+  .heat .d{aspect-ratio:1; border-radius:6px; background:var(--panel2); border:1px solid var(--line)}
+  .heat .d.on{background:var(--accent); border-color:var(--accent)}
+  .heat .d.today{outline:2px solid var(--warn); outline-offset:1px}
+  .heat .wd{font-size:10px; color:var(--faint); text-align:center; padding-bottom:2px}
+  .statgrid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; text-align:center}
+  .stat .n{font-size:26px; font-weight:800}
+  .stat .l{font-size:11px; color:var(--muted); margin-top:2px}
+
+  .toggle{display:flex; align-items:center; justify-content:space-between; padding:14px 2px; border-top:1px solid var(--line)}
+  .toggle:first-child{border-top:none}
+  .sw{width:50px; height:30px; border-radius:20px; background:var(--panel2); border:1px solid var(--line2); position:relative; transition:background .15s; flex:0 0 auto}
+  .sw::after{content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:var(--muted); transition:.15s}
+  .sw.on{background:var(--accent-d)} .sw.on::after{left:23px; background:var(--accent)}
+
+  /* ---- tab bar ---- */
+  nav.tabs{position:fixed; bottom:0; left:0; right:0; z-index:40;
+    height:calc(var(--tabh) + var(--safe-b)); padding-bottom:var(--safe-b);
+    background:rgba(13,20,17,.92); backdrop-filter:blur(14px); border-top:1px solid var(--line);
+    display:flex; max-width:560px; margin:0 auto}
+  nav.tabs button{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px; color:var(--faint); font-size:10.5px; font-weight:600; letter-spacing:.3px}
+  nav.tabs button .i{font-size:21px; line-height:1}
+  nav.tabs button.on{color:var(--accent)}
+
+  /* ---- workout fullscreen overlay ---- */
+  .overlay{position:fixed; inset:0; z-index:100; display:none; flex-direction:column;
+    color:#fff; padding:calc(var(--safe-t) + 10px) 20px calc(var(--safe-b) + 22px)}
+  .overlay.show{display:flex}
+  .overlay.work{background:radial-gradient(120% 90% at 50% 0%, #103a24, #071710)}
+  .overlay.rest{background:radial-gradient(120% 90% at 50% 0%, #12335e, #06101f)}
+  .overlay.prep{background:radial-gradient(120% 90% at 50% 0%, #3a3410, #171407)}
+  .ov-top{display:flex; align-items:center; justify-content:space-between}
+  .ov-top .close{font-size:26px; color:rgba(255,255,255,.7); padding:6px}
+  .ov-phase{font-size:14px; letter-spacing:3px; text-transform:uppercase; font-weight:700; opacity:.8}
+  .ov-mid{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center}
+  .ov-emoji{font-size:78px; line-height:1; margin-bottom:6px}
+  .ov-name{font-size:30px; font-weight:800; margin-bottom:4px}
+  .ov-instr{color:rgba(255,255,255,.75); font-size:15px; max-width:300px; line-height:1.4}
+  .ov-time{font-size:96px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-2px; margin:10px 0}
+  .ov-next{color:rgba(255,255,255,.6); font-size:14px; margin-top:2px}
+  .ring{--p:0; width:250px; height:250px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:conic-gradient(currentColor calc(var(--p)*1%), rgba(255,255,255,.12) 0);}
+  .ring .inner{width:224px; height:224px; border-radius:50%; background:rgba(0,0,0,.32);
+    display:flex; flex-direction:column; align-items:center; justify-content:center}
+  .work .ring{color:var(--accent)} .rest .ring{color:#5aa0ff} .prep .ring{color:var(--warn)}
+  .ov-progressbar{height:6px; border-radius:6px; background:rgba(255,255,255,.15); overflow:hidden; margin-top:16px}
+  .ov-progressbar>i{display:block; height:100%; background:#fff; opacity:.85; transition:width .3s}
+  .ov-ctrl{display:flex; gap:12px; margin-top:20px}
+  .ov-ctrl button{flex:1; padding:16px; border-radius:14px; background:rgba(255,255,255,.14); color:#fff; font-weight:700; font-size:16px}
+  .ov-ctrl button.main{background:#fff; color:#08150e; flex:1.4}
+  .ov-count{font-size:13px; opacity:.7; margin-top:10px; text-align:center; letter-spacing:1px}
+
+  /* ---- modal (edit routine / step) ---- */
+  .modal{position:fixed; inset:0; z-index:90; background:rgba(0,0,0,.6); display:none;
+    align-items:flex-end; justify-content:center}
+  .modal.show{display:flex}
+  .sheet{background:var(--bg2); border:1px solid var(--line2); border-radius:20px 20px 0 0;
+    width:100%; max-width:560px; max-height:92vh; overflow:auto; padding:20px 18px calc(var(--safe-b) + 24px)}
+  .sheet h3{margin:2px 0 16px; font-size:18px}
+  .fld{margin-bottom:14px}
+  .fld label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.6px}
+  .fld input,.fld select,.fld textarea{width:100%; background:var(--panel); border:1px solid var(--line2);
+    color:var(--txt); border-radius:11px; padding:12px; outline:none}
+  .fld textarea{resize:vertical; min-height:60px}
+  .grabber{width:40px; height:5px; border-radius:5px; background:var(--line2); margin:0 auto 14px}
+
+  .stepedit{display:flex; align-items:center; gap:8px; padding:10px; background:var(--panel);
+    border:1px solid var(--line); border-radius:11px; margin-bottom:8px}
+  .stepedit .em{font-size:20px; width:30px; text-align:center; flex:0 0 auto}
+  .stepedit .nm{flex:1; min-width:0}
+  .stepedit .nm .t{font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .stepedit .nm .d{font-size:12px; color:var(--faint)}
+  .mv{color:var(--muted); font-size:18px; padding:4px 6px}
+  .link{color:var(--accent); font-weight:600}
+
+  .routine-item{display:flex; align-items:center; gap:12px; padding:14px; background:var(--panel);
+    border:1px solid var(--line); border-radius:14px; margin-bottom:10px}
+  .routine-item .ic{width:42px;height:42px;border-radius:11px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto}
+  .type-pill{font-size:10.5px; padding:2px 7px; border-radius:20px; text-transform:uppercase; letter-spacing:.5px; font-weight:700}
+  .type-pill.timer{background:var(--accent-soft); color:var(--accent)}
+  .type-pill.checklist{background:#13233f; color:#7fb0ff}
+
+  .flash{position:fixed; left:50%; bottom:calc(var(--tabh) + var(--safe-b) + 18px); transform:translateX(-50%);
+    background:var(--panel2); border:1px solid var(--line2); color:var(--txt); padding:11px 18px; border-radius:30px;
+    font-size:14px; z-index:120; opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; white-space:nowrap}
+  .flash.show{opacity:1; transform:translateX(-50%) translateY(-4px)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">OCHTEND <b>DRILL</b></div>
+    <div class="date" id="today-date"></div>
+  </header>
+
+  <!-- ============ VANDAAG ============ -->
+  <section class="view active" id="view-vandaag">
+    <div class="hero">
+      <div class="flame" id="hero-flame">🔥</div>
+      <div>
+        <div class="n" id="streak-n">0</div>
+        <div class="lbl">dagen streak</div>
+      </div>
+      <div class="r">
+        <div class="n2" id="today-done-n">0/0</div>
+        <div class="lbl">vandaag gedaan</div>
+      </div>
+    </div>
+    <div id="vandaag-routines"></div>
+    <h2 class="section">Taken die spelen</h2>
+    <div id="vandaag-taken"></div>
+  </section>
+
+  <!-- ============ ROUTINES ============ -->
+  <section class="view" id="view-routines">
+    <button class="btn block" id="new-routine-btn" style="margin:8px 0 16px">＋ Nieuwe routine</button>
+    <div id="routines-list"></div>
+  </section>
+
+  <!-- ============ TAKEN ============ -->
+  <section class="view" id="view-taken">
+    <div class="seg" id="taken-seg">
+      <button data-f="kort" class="on">Korte termijn</button>
+      <button data-f="lang">Lange termijn</button>
+    </div>
+    <div class="add">
+      <input id="task-input" placeholder="Nieuwe taak…" enterkeyhint="done" />
+      <button class="plus" id="task-add">＋</button>
+    </div>
+    <div id="taken-list"></div>
+  </section>
+
+  <!-- ============ VOORTGANG ============ -->
+  <section class="view" id="view-voortgang">
+    <div class="statgrid">
+      <div class="stat"><div class="n" id="st-streak">0</div><div class="l">Huidige streak</div></div>
+      <div class="stat"><div class="n" id="st-best">0</div><div class="l">Langste streak</div></div>
+      <div class="stat"><div class="n" id="st-total">0</div><div class="l">Sessies totaal</div></div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between; margin-bottom:8px">
+        <b>Laatste 5 weken</b><span class="small faint" id="heat-month"></span>
+      </div>
+      <div class="heat" id="heat-wd"></div>
+      <div class="heat" id="heat" style="margin-top:6px"></div>
+    </div>
+    <h2 class="section">Instellingen</h2>
+    <div class="card" style="padding:4px 16px">
+      <div class="toggle"><span>🔊 Geluid</span><div class="sw" id="sw-geluid"></div></div>
+      <div class="toggle"><span>📳 Trillen</span><div class="sw" id="sw-trillen"></div></div>
+    </div>
+    <button class="btn ghost block" id="export-btn" style="margin-bottom:10px">⬇︎ Backup exporteren</button>
+    <button class="btn danger block" id="reset-btn">Alles wissen</button>
+    <p class="center faint small" style="margin-top:18px">Ochtend Drill · data blijft lokaal op dit apparaat</p>
+  </section>
+
+  <nav class="tabs">
+    <button data-v="vandaag" class="on"><span class="i">🎯</span>Vandaag</button>
+    <button data-v="routines"><span class="i">📋</span>Routines</button>
+    <button data-v="taken"><span class="i">✅</span>Taken</button>
+    <button data-v="voortgang"><span class="i">📈</span>Voortgang</button>
+  </nav>
+</div>
+
+<!-- ===== Workout overlay ===== -->
+<div class="overlay" id="overlay">
+  <div class="ov-top">
+    <div class="ov-phase" id="ov-phase">Klaar</div>
+    <button class="close" id="ov-close">✕</button>
+  </div>
+  <div class="ov-mid">
+    <div class="ov-emoji" id="ov-emoji">💪</div>
+    <div class="ov-name" id="ov-name"></div>
+    <div class="ring" id="ov-ring"><div class="inner">
+      <div class="ov-time" id="ov-time">0</div>
+    </div></div>
+    <div class="ov-instr" id="ov-instr"></div>
+    <div class="ov-next" id="ov-next"></div>
+    <div class="ov-count" id="ov-count"></div>
+  </div>
+  <div class="ov-progressbar"><i id="ov-bar" style="width:0%"></i></div>
+  <div class="ov-ctrl">
+    <button id="ov-prev">⏮</button>
+    <button class="main" id="ov-pause">⏸ Pauze</button>
+    <button id="ov-skip">⏭</button>
+  </div>
+</div>
+
+<!-- ===== Routine edit modal ===== -->
+<div class="modal" id="modal-routine">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h3 id="mr-title">Routine bewerken</h3>
+    <div class="fld">
+      <label>Naam</label>
+      <input id="mr-naam" placeholder="Bijv. Military Ochtend" />
+    </div>
+    <div class="row" style="gap:10px">
+      <div class="fld grow">
+        <label>Type</label>
+        <select id="mr-type">
+          <option value="timer">Timer (circuit met tijden)</option>
+          <option value="checklist">Checklist (afvinken)</option>
+        </select>
+      </div>
+      <div class="fld grow">
+        <label>Icoon</label>
+        <input id="mr-emoji" maxlength="2" placeholder="💪" />
+      </div>
+    </div>
+    <div class="fld">
+      <label>Dagdeel</label>
+      <select id="mr-dagdeel">
+        <option value="ochtend">Ochtend</option>
+        <option value="middag">Middag</option>
+        <option value="avond">Avond</option>
+        <option value="anders">Anders</option>
+      </select>
+    </div>
+    <div class="toggle" style="border:none; padding:6px 2px">
+      <span>Toon bij <b>Vandaag</b> (dagelijks)</span>
+      <div class="sw" id="mr-dagelijks"></div>
+    </div>
+
+    <label style="display:block; font-size:12px; color:var(--muted); margin:14px 2px 8px; text-transform:uppercase; letter-spacing:.6px">Stappen</label>
+    <div id="mr-steps"></div>
+    <button class="btn ghost block sm" id="mr-add-step" style="margin-top:4px">＋ Stap toevoegen</button>
+
+    <div class="row" style="margin-top:20px; gap:10px">
+      <button class="btn danger" id="mr-delete">Verwijderen</button>
+      <button class="btn ghost grow" id="mr-cancel">Annuleer</button>
+      <button class="btn grow" id="mr-save">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Step edit modal ===== -->
+<div class="modal" id="modal-step">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h3 id="ms-title">Stap</h3>
+    <div class="row" style="gap:10px">
+      <div class="fld" style="flex:0 0 84px">
+        <label>Icoon</label>
+        <input id="ms-emoji" maxlength="2" placeholder="💪" />
+      </div>
+      <div class="fld grow">
+        <label>Naam</label>
+        <input id="ms-naam" placeholder="Bijv. Push-ups" />
+      </div>
+    </div>
+    <div class="fld">
+      <label>Instructie / toelichting</label>
+      <textarea id="ms-instr" placeholder="Korte uitleg (optioneel)"></textarea>
+    </div>
+    <div class="row" id="ms-times" style="gap:10px">
+      <div class="fld grow">
+        <label>Werk (sec)</label>
+        <input id="ms-werk" type="number" inputmode="numeric" min="0" placeholder="45" />
+      </div>
+      <div class="fld grow">
+        <label>Rust erna (sec)</label>
+        <input id="ms-rust" type="number" inputmode="numeric" min="0" placeholder="15" />
+      </div>
+    </div>
+    <div class="fld" id="ms-tijd-wrap">
+      <label>Richttijd (optioneel)</label>
+      <input id="ms-tijd" placeholder="bijv. 21:00" />
+    </div>
+    <div class="row" style="margin-top:12px; gap:10px">
+      <button class="btn danger" id="ms-delete">Verwijderen</button>
+      <button class="btn ghost grow" id="ms-cancel">Annuleer</button>
+      <button class="btn grow" id="ms-save">Klaar</button>
+    </div>
+  </div>
+</div>
+
+<div class="flash" id="flash"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Ochtend Drill — self-contained routine & taken app
+   Data: localStorage. Geen backend, werkt offline.
+============================================================ */
+
+const LS_KEY = "ochtenddrill_v1";
+const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
+const todayISO = () => new Date().toISOString().slice(0,10);
+const $ = (s,r=document) => r.querySelector(s);
+const $$ = (s,r=document) => [...r.querySelectorAll(s)];
+
+/* ---------- default data (presets) ---------- */
+function defaultData(){
+  return {
+    routines: [
+      {
+        id: uid(), naam: "Military Ochtend", type: "timer",
+        emoji: "🪖", dagdeel: "ochtend", dagelijks: true,
+        stappen: [
+          {id:uid(), naam:"Jumping jacks",     emoji:"🤸", werkSec:45, rustSec:15, instructie:"Explosief, armen helemaal boven je hoofd."},
+          {id:uid(), naam:"Push-ups",          emoji:"💪", werkSec:45, rustSec:15, instructie:"Rug recht, borst naar de grond. Knieën mag."},
+          {id:uid(), naam:"Squats",            emoji:"🦵", werkSec:45, rustSec:15, instructie:"Zak tot je dijen horizontaal zijn, hakken op de grond."},
+          {id:uid(), naam:"Mountain climbers", emoji:"⛰️", werkSec:45, rustSec:15, instructie:"Plankpositie, knieën snel naar de borst."},
+          {id:uid(), naam:"Plank",             emoji:"🧱", werkSec:45, rustSec:15, instructie:"Strak lichaam, buik en billen aanspannen."},
+          {id:uid(), naam:"Lunges",            emoji:"🚶", werkSec:45, rustSec:15, instructie:"Wissel per been af, knie net boven de grond."},
+          {id:uid(), naam:"High knees",        emoji:"🏃", werkSec:45, rustSec:15, instructie:"Ter plaatse rennen, knieën hoog op."},
+          {id:uid(), naam:"Burpees",           emoji:"🔥", werkSec:45, rustSec:15, instructie:"Squat, plank, push-up, sprong. Volle beweging."},
+          {id:uid(), naam:"Sit-ups",           emoji:"🧎", werkSec:45, rustSec:15, instructie:"Rustig omhoog, gecontroleerd terug."},
+          {id:uid(), naam:"Superman",          emoji:"🦸", werkSec:45, rustSec:15, instructie:"Op je buik, armen en benen tegelijk optillen."},
+          {id:uid(), naam:"Cooldown / rekken", emoji:"🧘", werkSec:30, rustSec:0,  instructie:"Diep ademhalen, spieren losjes uitrekken."},
+        ]
+      },
+      {
+        id: uid(), naam: "Avond voorbereiding", type: "checklist",
+        emoji: "🌙", dagdeel: "avond", dagelijks: true,
+        stappen: [
+          {id:uid(), naam:"Broodjes smeren voor morgen", emoji:"🥪", tijd:"21:00", instructie:""},
+          {id:uid(), naam:"Sportkleding klaarleggen",    emoji:"👕", tijd:"", instructie:""},
+          {id:uid(), naam:"Fles water vullen",           emoji:"💧", tijd:"", instructie:""},
+          {id:uid(), naam:"Nieuws / updates checken",    emoji:"📰", tijd:"", instructie:""},
+          {id:uid(), naam:"Telefoon opladen + wekker",   emoji:"⏰", tijd:"22:30", instructie:""},
+        ]
+      }
+    ],
+    taken: [
+      {id:uid(), tekst:"Voorbeeld: boodschappen doen", termijn:"kort", klaar:false, vervaldatum:""},
+      {id:uid(), tekst:"Voorbeeld: sportschema uitbreiden", termijn:"lang", klaar:false, vervaldatum:""},
+    ],
+    voortgang: { sessies: [], streakLangste: 0 },
+    instellingen: { geluid:true, trillen:true },
+    // per-dag voltooiing van routines: { "2026-08-28": [routineId,...] }
+    voltooid: {}
+  };
+}
+
+/* ---------- storage ---------- */
+let D;
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ D = JSON.parse(raw); }
+  }catch(e){ D = null; }
+  if(!D || typeof D !== "object"){ D = defaultData(); save(); }
+  // vul ontbrekende velden aan (voorwaartse compatibiliteit)
+  D.routines ||= []; D.taken ||= [];
+  D.voortgang ||= {sessies:[], streakLangste:0};
+  D.instellingen ||= {geluid:true, trillen:true};
+  D.voltooid ||= {};
+}
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(D)); }catch(e){}
+}
+
+/* ---------- helpers ---------- */
+function fmtDateNL(d){
+  return d.toLocaleDateString("nl-NL",{weekday:"long", day:"numeric", month:"long"});
+}
+function routineDuration(r){
+  if(r.type!=="timer") return r.stappen.length + " stappen";
+  const tot = r.stappen.reduce((a,s)=>a+(+s.werkSec||0)+(+s.rustSec||0),0);
+  const m = Math.round(tot/60);
+  return "≈ " + m + " min · " + r.stappen.length + " oef.";
+}
+function isDoneToday(routineId){
+  return (D.voltooid[todayISO()]||[]).includes(routineId);
+}
+function markRoutineDone(routineId){
+  const t = todayISO();
+  D.voltooid[t] ||= [];
+  if(!D.voltooid[t].includes(routineId)) D.voltooid[t].push(routineId);
+  if(!D.voortgang.sessies.includes(t)) D.voortgang.sessies.push(t);
+  recalcStreak();
+  save();
+}
+function unmarkRoutineDone(routineId){
+  const t = todayISO();
+  D.voltooid[t] = (D.voltooid[t]||[]).filter(x=>x!==routineId);
+  // als geen enkele routine meer af is vandaag -> haal dag uit sessies
+  if((D.voltooid[t]||[]).length===0){
+    D.voortgang.sessies = D.voortgang.sessies.filter(x=>x!==t);
+  }
+  recalcStreak();
+  save();
+}
+function currentStreak(){
+  const set = new Set(D.voortgang.sessies);
+  let n = 0; let d = new Date();
+  // streak telt tot en met vandaag; als vandaag nog niet -> kijk vanaf gisteren
+  if(!set.has(todayISO())) d.setDate(d.getDate()-1);
+  for(;;){
+    const iso = d.toISOString().slice(0,10);
+    if(set.has(iso)){ n++; d.setDate(d.getDate()-1); } else break;
+  }
+  return n;
+}
+function recalcStreak(){
+  const s = currentStreak();
+  if(s > (D.voortgang.streakLangste||0)) D.voortgang.streakLangste = s;
+}
+
+/* ---------- feedback ---------- */
+let flashT;
+function flash(msg){
+  const f = $("#flash"); f.textContent = msg; f.classList.add("show");
+  clearTimeout(flashT); flashT = setTimeout(()=>f.classList.remove("show"), 1600);
+}
+function buzz(ms){ if(D.instellingen.trillen && navigator.vibrate) navigator.vibrate(ms); }
+
+/* ---------- audio cues (WebAudio, geen bestanden) ---------- */
+let actx;
+function beep(freq=880, dur=0.12, type="sine", vol=0.25){
+  if(!D.instellingen.geluid) return;
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==="suspended") actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type=type; o.frequency.value=freq; o.connect(g); g.connect(actx.destination);
+    g.gain.setValueAtTime(vol, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime+dur);
+    o.start(); o.stop(actx.currentTime+dur);
+  }catch(e){}
+}
+const cueTick   = ()=>beep(660,0.07,"sine",0.18);
+const cueWork   = ()=>{beep(880,0.14,"square",0.22);};
+const cueRest   = ()=>{beep(440,0.16,"sine",0.2);};
+const cueDone   = ()=>{beep(660,0.12); setTimeout(()=>beep(880,0.12),130); setTimeout(()=>beep(1180,0.2),270);};
+
+/* ============================================================
+   NAVIGATIE
+============================================================ */
+function switchView(v){
+  $$(".view").forEach(el=>el.classList.toggle("active", el.id==="view-"+v));
+  $$("nav.tabs button").forEach(b=>b.classList.toggle("on", b.dataset.v===v));
+  if(v==="vandaag") renderVandaag();
+  if(v==="routines") renderRoutines();
+  if(v==="taken") renderTaken();
+  if(v==="voortgang") renderVoortgang();
+  window.scrollTo(0,0);
+}
+$$("nav.tabs button").forEach(b=> b.onclick = ()=>switchView(b.dataset.v));
+
+/* ============================================================
+   VANDAAG
+============================================================ */
+function renderVandaag(){
+  const daily = D.routines.filter(r=>r.dagelijks);
+  const doneCount = daily.filter(r=>isDoneToday(r.id)).length;
+  $("#streak-n").textContent = currentStreak();
+  $("#today-done-n").textContent = doneCount + "/" + daily.length;
+  $("#hero-flame").style.filter = currentStreak()>0 ? "none" : "grayscale(1) opacity(.5)";
+
+  const host = $("#vandaag-routines"); host.innerHTML = "";
+  if(daily.length===0){
+    host.innerHTML = `<div class="empty">Nog geen dagelijkse routines.<br>Ga naar <b>Routines</b> en zet er één op “dagelijks”.</div>`;
+  }
+  daily.forEach(r=>{
+    const done = isDoneToday(r.id);
+    const card = document.createElement("div");
+    card.className = "card";
+    if(r.type==="timer"){
+      card.innerHTML = `
+        <div class="rt">
+          <div class="ic">${r.emoji||"💪"}</div>
+          <div class="meta">
+            <div class="t">${esc(r.naam)} ${done?'<span class="badge done">✓ gedaan</span>':''}</div>
+            <div class="s">${routineDuration(r)} · ${capital(r.dagdeel||"")}</div>
+          </div>
+        </div>
+        <button class="btn block" style="margin-top:14px">${done?'↻ Opnieuw doen':'▶ Start training'}</button>`;
+      card.querySelector("button").onclick = ()=>startWorkout(r);
+    } else {
+      const doneSteps = getChecklistState(r.id);
+      const li = r.stappen.map(s=>{
+        const on = doneSteps.includes(s.id);
+        return `<li class="${on?'done':''}" data-sid="${s.id}">
+          <div class="chk ${on?'on':''}">✓</div>
+          <div class="lbl">${esc(s.naam)}</div>
+          ${s.tijd?`<div class="tm">${esc(s.tijd)}</div>`:''}
+        </li>`;
+      }).join("");
+      card.innerHTML = `
+        <div class="rt">
+          <div class="ic">${r.emoji||"📋"}</div>
+          <div class="meta">
+            <div class="t">${esc(r.naam)} ${done?'<span class="badge done">✓ klaar</span>':''}</div>
+            <div class="s">${r.stappen.length} stappen · ${capital(r.dagdeel||"")}</div>
+          </div>
+        </div>
+        <ul class="steps">${li}</ul>`;
+      card.querySelectorAll(".steps li").forEach(el=>{
+        el.onclick = ()=>toggleChecklistStep(r, el.dataset.sid);
+      });
+    }
+    host.appendChild(card);
+  });
+
+  // taken die spelen
+  const th = $("#vandaag-taken"); th.innerHTML = "";
+  const open = D.taken.filter(t=>!t.klaar);
+  const spelen = open.slice().sort(sortTaken).slice(0,4);
+  if(spelen.length===0){
+    th.innerHTML = `<div class="empty">Geen openstaande taken 🎉</div>`;
+  } else {
+    spelen.forEach(t=> th.appendChild(taskEl(t)));
+  }
+}
+
+/* checklist per-dag state opgeslagen in voltooid-map met key `${date}::${rid}` */
+function checklistKey(rid){ return todayISO()+"::"+rid; }
+function getChecklistState(rid){ return D.voltooid[checklistKey(rid)] || []; }
+function toggleChecklistStep(r, sid){
+  const key = checklistKey(r.id);
+  D.voltooid[key] ||= [];
+  const arr = D.voltooid[key];
+  const i = arr.indexOf(sid);
+  if(i>=0) arr.splice(i,1); else arr.push(sid);
+  buzz(15);
+  // hele checklist af? -> markeer routine gedaan
+  const allDone = r.stappen.every(s=>arr.includes(s.id)) && r.stappen.length>0;
+  if(allDone){ markRoutineDone(r.id); cueDone(); flash("✓ "+r.naam+" afgerond!"); }
+  else { unmarkRoutineDone(r.id); }
+  save(); renderVandaag();
+}
+
+/* ============================================================
+   WORKOUT / TIMER MODUS
+============================================================ */
+let W = null; // {routine, seq[], idx, remaining, paused, timer}
+function buildSequence(r){
+  const seq = [];
+  r.stappen.forEach((s,i)=>{
+    seq.push({phase:"work", step:s, dur:+s.werkSec||0, idx:i});
+    if((+s.rustSec||0) > 0 && i < r.stappen.length-1)
+      seq.push({phase:"rest", step:r.stappen[i+1], dur:+s.rustSec, idx:i, prep:true});
+  });
+  return seq.filter(x=>x.dur>0);
+}
+function startWorkout(r){
+  if(!r.stappen.length){ flash("Deze routine heeft nog geen stappen."); return; }
+  try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)(); actx.resume&&actx.resume(); }catch(e){}
+  const seq = buildSequence(r);
+  W = {routine:r, seq, idx:0, remaining:seq[0].dur, paused:false, timer:null};
+  $("#overlay").classList.add("show");
+  document.body.style.overflow="hidden";
+  renderWorkStep(true);
+  runTimer();
+}
+function runTimer(){
+  clearInterval(W.timer);
+  W.timer = setInterval(()=>{
+    if(W.paused) return;
+    W.remaining--;
+    if(W.remaining <= 0){ nextWorkStep(); return; }
+    if(W.remaining <= 3){ cueTick(); buzz(20); }
+    paintTime();
+  },1000);
+}
+function renderWorkStep(first){
+  const cur = W.seq[W.idx];
+  const ov = $("#overlay");
+  ov.classList.remove("work","rest","prep");
+  const isRest = cur.phase==="rest";
+  ov.classList.add(isRest?"rest":"work");
+  $("#ov-phase").textContent = isRest ? "Rust" : "Aan de slag";
+  $("#ov-emoji").textContent = cur.step.emoji || (isRest?"😮‍💨":"💪");
+  $("#ov-name").textContent = isRest ? ("Straks: "+cur.step.naam) : cur.step.naam;
+  $("#ov-instr").textContent = isRest ? "Even ademhalen…" : (cur.step.instructie||"");
+  // volgende
+  const nx = W.seq[W.idx+1];
+  $("#ov-next").textContent = nx ? ("Hierna: "+(nx.phase==="rest"?"rust":nx.step.naam)) : "Laatste! 💥";
+  const workSteps = W.seq.filter(x=>x.phase==="work").length;
+  const workDoneIdx = W.seq.slice(0,W.idx+1).filter(x=>x.phase==="work").length;
+  $("#ov-count").textContent = "OEFENING " + Math.min(workDoneIdx,workSteps) + " / " + workSteps;
+  paintTime();
+  if(!first){ isRest ? cueRest() : cueWork(); buzz(isRest?40:[60,40,60]); }
+  else { cueWork(); buzz([60,40,60]); }
+}
+function paintTime(){
+  const cur = W.seq[W.idx];
+  $("#ov-time").textContent = W.remaining;
+  const p = cur.dur>0 ? ((cur.dur-W.remaining)/cur.dur*100) : 0;
+  $("#ov-ring").style.setProperty("--p", p);
+  const overall = (W.idx + (cur.dur-W.remaining)/cur.dur) / W.seq.length * 100;
+  $("#ov-bar").style.width = overall + "%";
+}
+function nextWorkStep(){
+  if(W.idx >= W.seq.length-1){ finishWorkout(); return; }
+  W.idx++; W.remaining = W.seq[W.idx].dur; renderWorkStep(false);
+}
+function prevWorkStep(){
+  if(W.idx<=0){ W.remaining = W.seq[0].dur; paintTime(); return; }
+  W.idx--; W.remaining = W.seq[W.idx].dur; renderWorkStep(false);
+}
+function finishWorkout(){
+  clearInterval(W.timer);
+  const r = W.routine;
+  markRoutineDone(r.id);
+  cueDone(); buzz([80,50,80,50,120]);
+  closeOverlay();
+  flash("💥 "+r.naam+" voltooid! Streak: "+currentStreak());
+  switchView("vandaag");
+}
+function closeOverlay(){
+  if(W) clearInterval(W.timer); W=null;
+  $("#overlay").classList.remove("show");
+  document.body.style.overflow="";
+}
+$("#ov-close").onclick = ()=>{ if(confirm("Training stoppen? Voortgang van deze sessie gaat verloren.")) closeOverlay(); };
+$("#ov-pause").onclick = ()=>{
+  W.paused = !W.paused;
+  $("#ov-pause").textContent = W.paused ? "▶ Hervat" : "⏸ Pauze";
+};
+$("#ov-skip").onclick = ()=>nextWorkStep();
+$("#ov-prev").onclick = ()=>prevWorkStep();
+
+/* ============================================================
+   ROUTINES (beheer)
+============================================================ */
+function renderRoutines(){
+  const host = $("#routines-list"); host.innerHTML="";
+  if(D.routines.length===0){
+    host.innerHTML = `<div class="empty">Nog geen routines. Maak er één aan hierboven.</div>`;
+    return;
+  }
+  D.routines.forEach(r=>{
+    const el = document.createElement("div");
+    el.className="routine-item";
+    el.innerHTML = `
+      <div class="ic">${r.emoji||(r.type==="timer"?"💪":"📋")}</div>
+      <div class="grow" style="min-width:0">
+        <div style="font-weight:700; font-size:15px">${esc(r.naam)}
+          ${r.dagelijks?'<span class="badge">dagelijks</span>':''}</div>
+        <div class="small muted" style="margin-top:3px">
+          <span class="type-pill ${r.type}">${r.type==="timer"?"timer":"checklist"}</span>
+          &nbsp;${routineDuration(r)}
+        </div>
+      </div>
+      <button class="btn ghost sm">Bewerk</button>`;
+    el.querySelector("button").onclick = ()=>openRoutineModal(r.id);
+    host.appendChild(el);
+  });
+}
+$("#new-routine-btn").onclick = ()=>openRoutineModal(null);
+
+/* ---- routine modal ---- */
+let editR = null; // werkkopie
+function openRoutineModal(id){
+  if(id){
+    editR = JSON.parse(JSON.stringify(D.routines.find(r=>r.id===id)));
+    $("#mr-title").textContent = "Routine bewerken";
+    $("#mr-delete").style.display="";
+  } else {
+    editR = {id:uid(), naam:"", type:"timer", emoji:"💪", dagdeel:"ochtend", dagelijks:true, stappen:[]};
+    $("#mr-title").textContent = "Nieuwe routine";
+    $("#mr-delete").style.display="none";
+  }
+  $("#mr-naam").value = editR.naam;
+  $("#mr-type").value = editR.type;
+  $("#mr-emoji").value = editR.emoji||"";
+  $("#mr-dagdeel").value = editR.dagdeel||"ochtend";
+  $("#mr-dagelijks").classList.toggle("on", !!editR.dagelijks);
+  renderModalSteps();
+  showModal("modal-routine");
+}
+function renderModalSteps(){
+  const host = $("#mr-steps"); host.innerHTML="";
+  const isTimer = editR.type==="timer";
+  editR.stappen.forEach((s,i)=>{
+    const row = document.createElement("div");
+    row.className="stepedit";
+    const detail = isTimer
+      ? `${s.werkSec||0}s werk · ${s.rustSec||0}s rust`
+      : (s.tijd ? ("🕒 "+esc(s.tijd)) : "afvinken");
+    row.innerHTML = `
+      <span class="mv" data-up>▲</span><span class="mv" data-dn>▼</span>
+      <span class="em">${s.emoji||"•"}</span>
+      <div class="nm"><div class="t">${esc(s.naam||"(naamloos)")}</div><div class="d">${detail}</div></div>
+      <button class="link" data-edit>bewerk</button>`;
+    row.querySelector("[data-up]").onclick = ()=>{ if(i>0){ swap(editR.stappen,i,i-1); renderModalSteps(); } };
+    row.querySelector("[data-dn]").onclick = ()=>{ if(i<editR.stappen.length-1){ swap(editR.stappen,i,i+1); renderModalSteps(); } };
+    row.querySelector("[data-edit]").onclick = ()=>openStepModal(i);
+    host.appendChild(row);
+  });
+  if(editR.stappen.length===0) host.innerHTML = `<div class="small faint" style="padding:6px 2px">Nog geen stappen.</div>`;
+}
+$("#mr-type").onchange = ()=>{ editR.type = $("#mr-type").value; renderModalSteps(); };
+$("#mr-add-step").onclick = ()=>{
+  editR.type = $("#mr-type").value;
+  openStepModal(-1);
+};
+$("#mr-dagelijks").onclick = function(){ this.classList.toggle("on"); };
+$("#mr-cancel").onclick = ()=>hideModal("modal-routine");
+$("#mr-delete").onclick = ()=>{
+  if(confirm("Deze routine verwijderen?")){
+    D.routines = D.routines.filter(r=>r.id!==editR.id); save();
+    hideModal("modal-routine"); renderRoutines(); flash("Routine verwijderd");
+  }
+};
+$("#mr-save").onclick = ()=>{
+  editR.naam = $("#mr-naam").value.trim() || "Naamloze routine";
+  editR.type = $("#mr-type").value;
+  editR.emoji = $("#mr-emoji").value.trim() || (editR.type==="timer"?"💪":"📋");
+  editR.dagdeel = $("#mr-dagdeel").value;
+  editR.dagelijks = $("#mr-dagelijks").classList.contains("on");
+  const existing = D.routines.findIndex(r=>r.id===editR.id);
+  if(existing>=0) D.routines[existing] = editR; else D.routines.push(editR);
+  save(); hideModal("modal-routine"); renderRoutines(); flash("Opgeslagen ✓");
+};
+
+/* ---- step modal ---- */
+let editStepIdx = -1;
+function openStepModal(i){
+  editStepIdx = i;
+  const isTimer = editR.type==="timer";
+  $("#ms-times").style.display = isTimer ? "" : "none";
+  $("#ms-tijd-wrap").style.display = isTimer ? "none" : "";
+  const s = i>=0 ? editR.stappen[i] : {naam:"",emoji:"",instructie:"",werkSec:45,rustSec:15,tijd:""};
+  $("#ms-title").textContent = i>=0 ? "Stap bewerken" : "Nieuwe stap";
+  $("#ms-emoji").value = s.emoji||"";
+  $("#ms-naam").value = s.naam||"";
+  $("#ms-instr").value = s.instructie||"";
+  $("#ms-werk").value = s.werkSec!=null?s.werkSec:45;
+  $("#ms-rust").value = s.rustSec!=null?s.rustSec:15;
+  $("#ms-tijd").value = s.tijd||"";
+  $("#ms-delete").style.display = i>=0 ? "" : "none";
+  showModal("modal-step");
+}
+$("#ms-cancel").onclick = ()=>hideModal("modal-step");
+$("#ms-delete").onclick = ()=>{
+  if(editStepIdx>=0){ editR.stappen.splice(editStepIdx,1); }
+  hideModal("modal-step"); renderModalSteps();
+};
+$("#ms-save").onclick = ()=>{
+  const s = {
+    id: editStepIdx>=0 ? editR.stappen[editStepIdx].id : uid(),
+    naam: $("#ms-naam").value.trim() || "Naamloze stap",
+    emoji: $("#ms-emoji").value.trim(),
+    instructie: $("#ms-instr").value.trim(),
+    werkSec: Math.max(0, parseInt($("#ms-werk").value)||0),
+    rustSec: Math.max(0, parseInt($("#ms-rust").value)||0),
+    tijd: $("#ms-tijd").value.trim()
+  };
+  if(editStepIdx>=0) editR.stappen[editStepIdx]=s; else editR.stappen.push(s);
+  hideModal("modal-step"); renderModalSteps();
+};
+
+/* ============================================================
+   TAKEN
+============================================================ */
+let takenFilter = "kort";
+$$("#taken-seg button").forEach(b=> b.onclick = ()=>{
+  takenFilter = b.dataset.f;
+  $$("#taken-seg button").forEach(x=>x.classList.toggle("on", x===b));
+  renderTaken();
+});
+function sortTaken(a,b){
+  if(a.klaar!==b.klaar) return a.klaar?1:-1;
+  const ad=a.vervaldatum||"9999", bd=b.vervaldatum||"9999";
+  return ad<bd?-1:ad>bd?1:0;
+}
+function dueInfo(t){
+  if(!t.vervaldatum) return null;
+  const diff = Math.round((new Date(t.vervaldatum) - new Date(todayISO()))/86400000);
+  let cls="", txt;
+  if(diff<0){ cls="over"; txt="⚠︎ "+(-diff)+" dg te laat"; }
+  else if(diff===0){ cls="soon"; txt="Vandaag"; }
+  else if(diff===1){ cls="soon"; txt="Morgen"; }
+  else txt = "Over "+diff+" dg";
+  return {cls,txt};
+}
+function taskEl(t){
+  const el = document.createElement("div");
+  el.className = "task"+(t.klaar?" done":"");
+  const due = dueInfo(t);
+  el.innerHTML = `
+    <div class="chk ${t.klaar?'on':''}">✓</div>
+    <div class="grow">
+      <div class="lbl">${esc(t.tekst)}</div>
+      ${due?`<div class="due ${due.cls}">${due.txt}</div>`:''}
+    </div>
+    <button class="x">✕</button>`;
+  el.querySelector(".chk").onclick = ()=>{ t.klaar=!t.klaar; buzz(15); save(); renderTaken(); renderVandaag(); };
+  el.querySelector(".lbl").onclick = ()=>editTaskDate(t);
+  el.querySelector(".x").onclick = ()=>{ D.taken=D.taken.filter(x=>x.id!==t.id); save(); renderTaken(); flash("Taak verwijderd"); };
+  return el;
+}
+function editTaskDate(t){
+  const v = prompt("Vervaldatum (JJJJ-MM-DD), leeg = geen:", t.vervaldatum||"");
+  if(v===null) return;
+  t.vervaldatum = v.trim();
+  save(); renderTaken();
+}
+function renderTaken(){
+  const host = $("#taken-list"); host.innerHTML="";
+  const list = D.taken.filter(t=>t.termijn===takenFilter).sort(sortTaken);
+  if(list.length===0){
+    host.innerHTML = `<div class="empty">Geen ${takenFilter==="kort"?"korte":"lange"}-termijn taken.<br>Voeg er één toe hierboven.</div>`;
+    return;
+  }
+  list.forEach(t=> host.appendChild(taskEl(t)));
+}
+function addTask(){
+  const inp = $("#task-input"); const v = inp.value.trim();
+  if(!v) return;
+  D.taken.push({id:uid(), tekst:v, termijn:takenFilter, klaar:false, vervaldatum:""});
+  inp.value=""; save(); renderTaken();
+}
+$("#task-add").onclick = addTask;
+$("#task-input").addEventListener("keydown", e=>{ if(e.key==="Enter") addTask(); });
+
+/* ============================================================
+   VOORTGANG
+============================================================ */
+function renderVoortgang(){
+  $("#st-streak").textContent = currentStreak();
+  $("#st-best").textContent = D.voortgang.streakLangste||0;
+  $("#st-total").textContent = D.voortgang.sessies.length;
+  // heatmap laatste 5 weken (35 dagen) uitgelijnd op ma-zo
+  const wd = ["M","D","W","D","V","Z","Z"];
+  $("#heat-wd").innerHTML = wd.map(w=>`<div class="wd">${w}</div>`).join("");
+  const set = new Set(D.voortgang.sessies);
+  const today = new Date();
+  // start = maandag van 4 weken geleden
+  const start = new Date(today);
+  const dow = (start.getDay()+6)%7; // 0=maandag
+  start.setDate(start.getDate() - dow - 28);
+  let html="";
+  for(let i=0;i<35;i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const iso = d.toISOString().slice(0,10);
+    const on = set.has(iso);
+    const isToday = iso===todayISO();
+    const future = d>today;
+    html += `<div class="d ${on?'on':''} ${isToday?'today':''}" style="${future?'opacity:.25':''}" title="${iso}"></div>`;
+  }
+  $("#heat").innerHTML = html;
+  $("#heat-month").textContent = today.toLocaleDateString("nl-NL",{month:"long", year:"numeric"});
+}
+
+/* ---- settings ---- */
+$("#sw-geluid").onclick = function(){ D.instellingen.geluid=!D.instellingen.geluid; this.classList.toggle("on",D.instellingen.geluid); save(); if(D.instellingen.geluid) cueWork(); };
+$("#sw-trillen").onclick = function(){ D.instellingen.trillen=!D.instellingen.trillen; this.classList.toggle("on",D.instellingen.trillen); save(); buzz(30); };
+$("#reset-btn").onclick = ()=>{
+  if(confirm("Alle routines, taken én voortgang wissen? Dit kan niet ongedaan worden.")){
+    D = defaultData(); save(); switchView("vandaag"); flash("Alles gereset");
+  }
+};
+$("#export-btn").onclick = ()=>{
+  try{
+    const blob = new Blob([JSON.stringify(D,null,2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href=url; a.download="ochtenddrill-backup-"+todayISO()+".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    flash("Backup gedownload");
+  }catch(e){ flash("Downloaden lukt niet in deze weergave"); }
+};
+
+/* ============================================================
+   MODAL helpers + util
+============================================================ */
+function showModal(id){ $("#"+id).classList.add("show"); }
+function hideModal(id){ $("#"+id).classList.remove("show"); }
+$$(".modal").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) m.classList.remove("show"); }));
+function swap(a,i,j){ [a[i],a[j]]=[a[j],a[i]]; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function capital(s){ return s?s.charAt(0).toUpperCase()+s.slice(1):""; }
+
+/* ============================================================
+   INIT
+============================================================ */
+function init(){
+  load();
+  $("#today-date").textContent = fmtDateNL(new Date());
+  $("#sw-geluid").classList.toggle("on", D.instellingen.geluid);
+  $("#sw-trillen").classList.toggle("on", D.instellingen.trillen);
+  recalcStreak(); save();
+  switchView("vandaag");
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "Ochtend Drill",
+  "short_name": "Drill",
+  "description": "Dagelijkse military-style ochtendroutine, eigen routines en takenlijst.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1411",
+  "theme_color": "#0d1411",
+  "lang": "nl",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512'%3E%3Crect width='512' height='512' rx='96' fill='%230d1411'/%3E%3Ctext x='256' y='300' font-size='260' text-anchor='middle' font-family='Arial'%3E%F0%9F%94%A5%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
