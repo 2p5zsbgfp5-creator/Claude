@@ -104,11 +104,17 @@
   .seg{display:flex; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:4px; gap:4px; margin-bottom:14px}
   .seg button{flex:1; padding:9px; border-radius:9px; font-size:14px; font-weight:600; color:var(--muted)}
   .seg button.on{background:var(--accent-soft); color:var(--accent)}
+  .daychips{display:flex; gap:6px}
+  .daychips button{flex:1; padding:10px 0; border-radius:10px; background:var(--panel); border:1px solid var(--line2);
+    color:var(--muted); font-size:13px; font-weight:700}
+  .daychips button.on{background:var(--accent-soft); color:var(--accent); border-color:var(--accent-d)}
   .task{display:flex; align-items:center; gap:12px; padding:13px 14px; background:var(--panel);
         border:1px solid var(--line); border-radius:12px; margin-bottom:9px}
   .task.done{opacity:.55}
+  .task .em{font-size:20px; width:26px; text-align:center; flex:0 0 auto}
   .task .lbl{flex:1; font-size:15px}
   .task.done .lbl{text-decoration:line-through}
+  .task .ctx{font-size:12.5px; color:var(--muted); margin-top:3px; line-height:1.35}
   .task .due{font-size:11px; color:var(--muted); margin-top:3px}
   .task .due.over{color:var(--danger)} .task .due.soon{color:var(--warn)}
   .x{color:var(--faint); font-size:20px; padding:2px 6px; flex:0 0 auto}
@@ -233,7 +239,7 @@
       </div>
     </div>
     <div id="vandaag-routines"></div>
-    <h2 class="section">Taken die spelen</h2>
+    <h2 class="section">Openstaande taken (korte termijn)</h2>
     <div id="vandaag-taken"></div>
   </section>
 
@@ -245,14 +251,7 @@
 
   <!-- ============ TAKEN ============ -->
   <section class="view" id="view-taken">
-    <div class="seg" id="taken-seg">
-      <button data-f="kort" class="on">Korte termijn</button>
-      <button data-f="lang">Lange termijn</button>
-    </div>
-    <div class="add">
-      <input id="task-input" placeholder="Nieuwe taak…" enterkeyhint="done" />
-      <button class="plus" id="task-add">＋</button>
-    </div>
+    <button class="btn block" id="new-task-btn" style="margin:8px 0 16px">＋ Nieuwe taak</button>
     <div id="taken-list"></div>
   </section>
 
@@ -343,12 +342,14 @@
         <option value="anders">Anders</option>
       </select>
     </div>
-    <div class="toggle" style="border:none; padding:6px 2px">
-      <span>Toon bij <b>Vandaag</b> (dagelijks)</span>
-      <div class="sw" id="mr-dagelijks"></div>
+    <label style="display:block; font-size:12px; color:var(--muted); margin:6px 2px 8px; text-transform:uppercase; letter-spacing:.6px">Komt terug op (Vandaag)</label>
+    <div class="daychips" id="mr-dagen"></div>
+    <div class="row" style="gap:8px; margin-top:8px">
+      <button class="btn ghost sm grow" id="mr-elke-dag" type="button">Elke dag</button>
+      <button class="btn ghost sm grow" id="mr-geen-dag" type="button">Geen</button>
     </div>
 
-    <label style="display:block; font-size:12px; color:var(--muted); margin:14px 2px 8px; text-transform:uppercase; letter-spacing:.6px">Stappen</label>
+    <label style="display:block; font-size:12px; color:var(--muted); margin:18px 2px 8px; text-transform:uppercase; letter-spacing:.6px">Stappen</label>
     <div id="mr-steps"></div>
     <button class="btn ghost block sm" id="mr-add-step" style="margin-top:4px">＋ Stap toevoegen</button>
 
@@ -401,6 +402,46 @@
   </div>
 </div>
 
+<!-- ===== Taak edit modal ===== -->
+<div class="modal" id="modal-taak">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h3 id="mt-title">Nieuwe taak</h3>
+    <div class="row" style="gap:10px">
+      <div class="fld" style="flex:0 0 84px">
+        <label>Icoon</label>
+        <input id="mt-icoon" maxlength="2" placeholder="📌" />
+      </div>
+      <div class="fld grow">
+        <label>Taak</label>
+        <input id="mt-tekst" placeholder="Wat moet er gebeuren?" />
+      </div>
+    </div>
+    <div class="fld">
+      <label>Context / toelichting</label>
+      <textarea id="mt-context" placeholder="Extra details (optioneel)"></textarea>
+    </div>
+    <div class="row" style="gap:10px">
+      <div class="fld grow">
+        <label>Termijn</label>
+        <select id="mt-termijn">
+          <option value="kort">Korte termijn</option>
+          <option value="lang">Lange termijn</option>
+        </select>
+      </div>
+      <div class="fld grow">
+        <label>Vervaldatum</label>
+        <input id="mt-datum" type="date" />
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px; gap:10px">
+      <button class="btn danger" id="mt-delete">Verwijderen</button>
+      <button class="btn ghost grow" id="mt-cancel">Annuleer</button>
+      <button class="btn grow" id="mt-save">Opslaan</button>
+    </div>
+  </div>
+</div>
+
 <div class="flash" id="flash"></div>
 
 <script>
@@ -413,6 +454,16 @@
 const LS_KEY = "ochtenddrill_v1";
 const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
 const todayISO = () => new Date().toISOString().slice(0,10);
+const todayWeekday = () => (new Date().getDay()+6)%7; // maandag=0 .. zondag=6
+const DAG_KORT = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
+function dagenLabel(dagen){
+  const d = (dagen||[]).slice().sort((a,b)=>a-b);
+  if(d.length===0) return "Niet gepland";
+  if(d.length===7) return "Elke dag";
+  if(d.length===5 && [0,1,2,3,4].every(x=>d.includes(x))) return "Ma–Vr";
+  if(d.length===2 && d.includes(5) && d.includes(6)) return "Weekend";
+  return d.map(x=>DAG_KORT[x]).join(" ");
+}
 const $ = (s,r=document) => r.querySelector(s);
 const $$ = (s,r=document) => [...r.querySelectorAll(s)];
 
@@ -422,7 +473,7 @@ function defaultData(){
     routines: [
       {
         id: uid(), naam: "Military Ochtend", type: "timer",
-        emoji: "🪖", dagdeel: "ochtend", dagelijks: true,
+        emoji: "🪖", dagdeel: "ochtend", dagen: [0,1,2,3,4,5,6],
         stappen: [
           {id:uid(), naam:"Jumping jacks",     emoji:"🤸", werkSec:45, rustSec:15, instructie:"Explosief, armen helemaal boven je hoofd."},
           {id:uid(), naam:"Push-ups",          emoji:"💪", werkSec:45, rustSec:15, instructie:"Rug recht, borst naar de grond. Knieën mag."},
@@ -439,7 +490,7 @@ function defaultData(){
       },
       {
         id: uid(), naam: "Avond voorbereiding", type: "checklist",
-        emoji: "🌙", dagdeel: "avond", dagelijks: true,
+        emoji: "🌙", dagdeel: "avond", dagen: [0,1,2,3,4,5,6],
         stappen: [
           {id:uid(), naam:"Broodjes smeren voor morgen", emoji:"🥪", tijd:"21:00", instructie:""},
           {id:uid(), naam:"Sportkleding klaarleggen",    emoji:"👕", tijd:"", instructie:""},
@@ -450,8 +501,8 @@ function defaultData(){
       }
     ],
     taken: [
-      {id:uid(), tekst:"Voorbeeld: boodschappen doen", termijn:"kort", klaar:false, vervaldatum:""},
-      {id:uid(), tekst:"Voorbeeld: sportschema uitbreiden", termijn:"lang", klaar:false, vervaldatum:""},
+      {id:uid(), tekst:"Boodschappen doen", icoon:"🛒", context:"Havermout, eieren, kip, groente voor de week.", termijn:"kort", klaar:false, vervaldatum:""},
+      {id:uid(), tekst:"Sportschema uitbreiden", icoon:"🏋️", context:"Na 2 weken een zwaardere routine opbouwen.", termijn:"lang", klaar:false, vervaldatum:""},
     ],
     voortgang: { sessies: [], streakLangste: 0 },
     instellingen: { geluid:true, trillen:true },
@@ -473,6 +524,15 @@ function load(){
   D.voortgang ||= {sessies:[], streakLangste:0};
   D.instellingen ||= {geluid:true, trillen:true};
   D.voltooid ||= {};
+  // migratie: routine.dagelijks (boolean) -> routine.dagen (weekdag-indices, ma=0..zo=6)
+  D.routines.forEach(r=>{
+    if(!Array.isArray(r.dagen)){
+      r.dagen = r.dagelijks ? [0,1,2,3,4,5,6] : [];
+    }
+    delete r.dagelijks;
+  });
+  // migratie: taken krijgen icoon + context
+  D.taken.forEach(t=>{ if(t.icoon==null) t.icoon=""; if(t.context==null) t.context=""; });
 }
 function save(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(D)); }catch(e){}
@@ -570,7 +630,8 @@ $$("nav.tabs button").forEach(b=> b.onclick = ()=>switchView(b.dataset.v));
    VANDAAG
 ============================================================ */
 function renderVandaag(){
-  const daily = D.routines.filter(r=>r.dagelijks);
+  const wd = todayWeekday();
+  const daily = D.routines.filter(r=>(r.dagen||[]).includes(wd));
   const doneCount = daily.filter(r=>isDoneToday(r.id)).length;
   $("#streak-n").textContent = currentStreak();
   $("#today-done-n").textContent = doneCount + "/" + daily.length;
@@ -578,7 +639,7 @@ function renderVandaag(){
 
   const host = $("#vandaag-routines"); host.innerHTML = "";
   if(daily.length===0){
-    host.innerHTML = `<div class="empty">Nog geen dagelijkse routines.<br>Ga naar <b>Routines</b> en zet er één op “dagelijks”.</div>`;
+    host.innerHTML = `<div class="empty">Geen routines gepland voor vandaag.<br>Ga naar <b>Routines</b> en kies op welke dagen een routine terugkomt.</div>`;
   }
   daily.forEach(r=>{
     const done = isDoneToday(r.id);
@@ -621,12 +682,11 @@ function renderVandaag(){
     host.appendChild(card);
   });
 
-  // taken die spelen
+  // openstaande korte-termijn taken
   const th = $("#vandaag-taken"); th.innerHTML = "";
-  const open = D.taken.filter(t=>!t.klaar);
-  const spelen = open.slice().sort(sortTaken).slice(0,4);
+  const spelen = D.taken.filter(t=>!t.klaar && t.termijn==="kort").sort(sortTaken).slice(0,5);
   if(spelen.length===0){
-    th.innerHTML = `<div class="empty">Geen openstaande taken 🎉</div>`;
+    th.innerHTML = `<div class="empty">Geen openstaande korte-termijn taken 🎉</div>`;
   } else {
     spelen.forEach(t=> th.appendChild(taskEl(t)));
   }
@@ -756,7 +816,7 @@ function renderRoutines(){
       <div class="ic">${r.emoji||(r.type==="timer"?"💪":"📋")}</div>
       <div class="grow" style="min-width:0">
         <div style="font-weight:700; font-size:15px">${esc(r.naam)}
-          ${r.dagelijks?'<span class="badge">dagelijks</span>':''}</div>
+          <span class="badge">${dagenLabel(r.dagen)}</span></div>
         <div class="small muted" style="margin-top:3px">
           <span class="type-pill ${r.type}">${r.type==="timer"?"timer":"checklist"}</span>
           &nbsp;${routineDuration(r)}
@@ -777,17 +837,32 @@ function openRoutineModal(id){
     $("#mr-title").textContent = "Routine bewerken";
     $("#mr-delete").style.display="";
   } else {
-    editR = {id:uid(), naam:"", type:"timer", emoji:"💪", dagdeel:"ochtend", dagelijks:true, stappen:[]};
+    editR = {id:uid(), naam:"", type:"timer", emoji:"💪", dagdeel:"ochtend", dagen:[0,1,2,3,4,5,6], stappen:[]};
     $("#mr-title").textContent = "Nieuwe routine";
     $("#mr-delete").style.display="none";
   }
+  if(!Array.isArray(editR.dagen)) editR.dagen = [];
   $("#mr-naam").value = editR.naam;
   $("#mr-type").value = editR.type;
   $("#mr-emoji").value = editR.emoji||"";
   $("#mr-dagdeel").value = editR.dagdeel||"ochtend";
-  $("#mr-dagelijks").classList.toggle("on", !!editR.dagelijks);
+  renderDayChips();
   renderModalSteps();
   showModal("modal-routine");
+}
+function renderDayChips(){
+  const host = $("#mr-dagen"); host.innerHTML="";
+  DAG_KORT.forEach((lbl,idx)=>{
+    const b = document.createElement("button");
+    b.type="button"; b.textContent=lbl;
+    b.className = editR.dagen.includes(idx) ? "on" : "";
+    b.onclick = ()=>{
+      const i = editR.dagen.indexOf(idx);
+      if(i>=0) editR.dagen.splice(i,1); else editR.dagen.push(idx);
+      renderDayChips();
+    };
+    host.appendChild(b);
+  });
 }
 function renderModalSteps(){
   const host = $("#mr-steps"); host.innerHTML="";
@@ -815,7 +890,8 @@ $("#mr-add-step").onclick = ()=>{
   editR.type = $("#mr-type").value;
   openStepModal(-1);
 };
-$("#mr-dagelijks").onclick = function(){ this.classList.toggle("on"); };
+$("#mr-elke-dag").onclick = ()=>{ editR.dagen=[0,1,2,3,4,5,6]; renderDayChips(); };
+$("#mr-geen-dag").onclick = ()=>{ editR.dagen=[]; renderDayChips(); };
 $("#mr-cancel").onclick = ()=>hideModal("modal-routine");
 $("#mr-delete").onclick = ()=>{
   if(confirm("Deze routine verwijderen?")){
@@ -828,7 +904,7 @@ $("#mr-save").onclick = ()=>{
   editR.type = $("#mr-type").value;
   editR.emoji = $("#mr-emoji").value.trim() || (editR.type==="timer"?"💪":"📋");
   editR.dagdeel = $("#mr-dagdeel").value;
-  editR.dagelijks = $("#mr-dagelijks").classList.contains("on");
+  editR.dagen = (editR.dagen||[]).slice().sort((a,b)=>a-b);
   const existing = D.routines.findIndex(r=>r.id===editR.id);
   if(existing>=0) D.routines[existing] = editR; else D.routines.push(editR);
   save(); hideModal("modal-routine"); renderRoutines(); flash("Opgeslagen ✓");
@@ -874,12 +950,6 @@ $("#ms-save").onclick = ()=>{
 /* ============================================================
    TAKEN
 ============================================================ */
-let takenFilter = "kort";
-$$("#taken-seg button").forEach(b=> b.onclick = ()=>{
-  takenFilter = b.dataset.f;
-  $$("#taken-seg button").forEach(x=>x.classList.toggle("on", x===b));
-  renderTaken();
-});
 function sortTaken(a,b){
   if(a.klaar!==b.klaar) return a.klaar?1:-1;
   const ad=a.vervaldatum||"9999", bd=b.vervaldatum||"9999";
@@ -901,39 +971,77 @@ function taskEl(t){
   const due = dueInfo(t);
   el.innerHTML = `
     <div class="chk ${t.klaar?'on':''}">✓</div>
+    ${t.icoon?`<div class="em">${esc(t.icoon)}</div>`:''}
     <div class="grow">
       <div class="lbl">${esc(t.tekst)}</div>
+      ${t.context?`<div class="ctx">${esc(t.context)}</div>`:''}
       ${due?`<div class="due ${due.cls}">${due.txt}</div>`:''}
     </div>
     <button class="x">✕</button>`;
-  el.querySelector(".chk").onclick = ()=>{ t.klaar=!t.klaar; buzz(15); save(); renderTaken(); renderVandaag(); };
-  el.querySelector(".lbl").onclick = ()=>editTaskDate(t);
-  el.querySelector(".x").onclick = ()=>{ D.taken=D.taken.filter(x=>x.id!==t.id); save(); renderTaken(); flash("Taak verwijderd"); };
+  el.querySelector(".chk").onclick = (e)=>{ e.stopPropagation(); t.klaar=!t.klaar; buzz(15); save(); renderTaken(); renderVandaag(); };
+  el.querySelector(".x").onclick = (e)=>{ e.stopPropagation(); D.taken=D.taken.filter(x=>x.id!==t.id); save(); renderTaken(); renderVandaag(); flash("Taak verwijderd"); };
+  el.querySelector(".grow").onclick = ()=>openTaskModal(t.id);
   return el;
-}
-function editTaskDate(t){
-  const v = prompt("Vervaldatum (JJJJ-MM-DD), leeg = geen:", t.vervaldatum||"");
-  if(v===null) return;
-  t.vervaldatum = v.trim();
-  save(); renderTaken();
 }
 function renderTaken(){
   const host = $("#taken-list"); host.innerHTML="";
-  const list = D.taken.filter(t=>t.termijn===takenFilter).sort(sortTaken);
-  if(list.length===0){
-    host.innerHTML = `<div class="empty">Geen ${takenFilter==="kort"?"korte":"lange"}-termijn taken.<br>Voeg er één toe hierboven.</div>`;
-    return;
+  const groep = (titel, termijn)=>{
+    const list = D.taken.filter(t=>t.termijn===termijn).sort(sortTaken);
+    const sec = document.createElement("div");
+    const h = document.createElement("h2");
+    h.className="section"; h.textContent=titel; sec.appendChild(h);
+    if(list.length===0){
+      const e = document.createElement("div");
+      e.className="empty"; e.style.padding="16px 10px";
+      e.textContent = "Nog geen taken hier.";
+      sec.appendChild(e);
+    } else {
+      list.forEach(t=> sec.appendChild(taskEl(t)));
+    }
+    host.appendChild(sec);
+  };
+  groep("Korte termijn", "kort");
+  groep("Lange termijn", "lang");
+}
+
+/* ---- taak modal ---- */
+let editTaskId = null;
+function openTaskModal(id){
+  editTaskId = id;
+  const t = id ? D.taken.find(x=>x.id===id) : {icoon:"",tekst:"",context:"",termijn:"kort",vervaldatum:""};
+  $("#mt-title").textContent = id ? "Taak bewerken" : "Nieuwe taak";
+  $("#mt-icoon").value = t.icoon||"";
+  $("#mt-tekst").value = t.tekst||"";
+  $("#mt-context").value = t.context||"";
+  $("#mt-termijn").value = t.termijn||"kort";
+  $("#mt-datum").value = t.vervaldatum||"";
+  $("#mt-delete").style.display = id ? "" : "none";
+  showModal("modal-taak");
+  if(!id) setTimeout(()=>$("#mt-tekst").focus(), 50);
+}
+$("#new-task-btn").onclick = ()=>openTaskModal(null);
+$("#mt-cancel").onclick = ()=>hideModal("modal-taak");
+$("#mt-delete").onclick = ()=>{
+  if(editTaskId){ D.taken = D.taken.filter(x=>x.id!==editTaskId); save(); }
+  hideModal("modal-taak"); renderTaken(); renderVandaag(); flash("Taak verwijderd");
+};
+$("#mt-save").onclick = ()=>{
+  const tekst = $("#mt-tekst").value.trim();
+  if(!tekst){ flash("Geef de taak een naam"); return; }
+  const data = {
+    icoon: $("#mt-icoon").value.trim(),
+    tekst,
+    context: $("#mt-context").value.trim(),
+    termijn: $("#mt-termijn").value,
+    vervaldatum: $("#mt-datum").value
+  };
+  if(editTaskId){
+    Object.assign(D.taken.find(x=>x.id===editTaskId), data);
+  } else {
+    D.taken.push({id:uid(), klaar:false, ...data});
   }
-  list.forEach(t=> host.appendChild(taskEl(t)));
-}
-function addTask(){
-  const inp = $("#task-input"); const v = inp.value.trim();
-  if(!v) return;
-  D.taken.push({id:uid(), tekst:v, termijn:takenFilter, klaar:false, vervaldatum:""});
-  inp.value=""; save(); renderTaken();
-}
-$("#task-add").onclick = addTask;
-$("#task-input").addEventListener("keydown", e=>{ if(e.key==="Enter") addTask(); });
+  save(); hideModal("modal-taak"); renderTaken(); renderVandaag(); flash("Opgeslagen ✓");
+};
 
 /* ============================================================
    VOORTGANG
