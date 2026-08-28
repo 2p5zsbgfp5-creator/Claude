@@ -23,6 +23,12 @@ bij te houden. Geen account, geen backend: alles draait offline en de data blijf
 - **Taken** — één lijst met **Korte termijn** bovenaan en **Lange termijn** eronder. Per taak
   een icoon, een context/toelichting en een optionele vervaldatum; afvinken laat een taak
   naar onderen zakken. De ＋-knop opent een bewerk-scherm; tik op een taak om die aan te passen.
+- **Menu** — een **weekmenu** voor het avondeten. Kies een **startdag** (bijv. za→vr of zo→vr)
+  en vul per dag in wat je eet; met ◀/▶ blader je door weken (oude weken blijven bewaard).
+  Bij een lekker gerecht tik je 🔖 om het in je **receptenboekje** (“Mijn gerechten”) te
+  bewaren met **ingrediënten** en **bereidingswijze** — alleen voor de gerechten die je wilt
+  bewaren. Opgeslagen gerechten stel je snel opnieuw in via de suggestielijst en kun je later
+  bewerken.
 - **Voortgang** — huidige & langste streak, totaal sessies, en een heatmap van gedane dagen.
   Hier houd je ook **Lichaam & gewicht** bij: lengte (cm), gewicht (kg), automatische **BMI**
   met categorie, en je **streefgewicht** — met een meet-logboek zodat je je gewicht over tijd

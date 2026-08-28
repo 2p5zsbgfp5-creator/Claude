@@ -138,6 +138,33 @@
   .stat .n{font-size:26px; font-weight:800}
   .stat .l{font-size:11px; color:var(--muted); margin-top:2px}
 
+  /* ---- weekmenu ---- */
+  .weeknav{display:flex; align-items:center; gap:10px; margin:8px 0 14px}
+  .weeknav>button{width:44px; height:44px; flex:0 0 auto; border-radius:12px; background:var(--panel2);
+    border:1px solid var(--line2); color:var(--txt); font-size:16px}
+  .weeknav>button:active{transform:scale(.94)}
+  .wk-mid{flex:1; text-align:center; min-width:0}
+  .wk-range{font-weight:800; font-size:16px}
+  .wk-start{display:inline-flex; align-items:center; gap:8px; margin-top:6px; font-size:12px; color:var(--muted)}
+  .wk-start input{background:var(--panel); border:1px solid var(--line2); color:var(--txt);
+    border-radius:9px; padding:6px 8px; font-size:13px}
+  .mday{display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--panel);
+    border:1px solid var(--line); border-radius:12px; margin-bottom:9px}
+  .mday.today{border-color:var(--accent-d); background:linear-gradient(90deg,var(--accent-soft),var(--panel) 60%)}
+  .mday .dnaam{flex:0 0 84px; font-size:12px; color:var(--muted); font-weight:700; text-transform:capitalize; line-height:1.25}
+  .mday .dnaam b{display:block; color:var(--txt); font-size:13px}
+  .mday input.dish{flex:1; min-width:0; background:transparent; border:none; color:var(--txt);
+    font-size:15px; outline:none; padding:6px 0; border-bottom:1px solid var(--line2)}
+  .mday input.dish:focus{border-color:var(--accent-d)}
+  .mday .rc{flex:0 0 auto; font-size:18px; padding:4px 6px; color:var(--muted)}
+  .mday .rc.linked{color:var(--accent)}
+  .gerecht{display:flex; align-items:center; gap:12px; padding:13px 14px; background:var(--panel);
+    border:1px solid var(--line); border-radius:12px; margin-bottom:9px}
+  .gerecht .em{font-size:22px; width:30px; text-align:center; flex:0 0 auto}
+  .gerecht .gnaam{flex:1; min-width:0}
+  .gerecht .gnaam .t{font-weight:700; font-size:15px}
+  .gerecht .gnaam .s{font-size:12px; color:var(--faint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
   /* ---- lichaam / BMI ---- */
   .bmibox{display:flex; align-items:center; gap:16px}
   .bmi-main{flex:0 0 auto; text-align:center; min-width:96px; padding:10px 14px; border-radius:14px; background:var(--panel2); border:1px solid var(--line2)}
@@ -166,8 +193,8 @@
     background:rgba(13,20,17,.92); backdrop-filter:blur(14px); border-top:1px solid var(--line);
     display:flex; max-width:560px; margin:0 auto}
   nav.tabs button{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:3px; color:var(--faint); font-size:10.5px; font-weight:600; letter-spacing:.3px}
-  nav.tabs button .i{font-size:21px; line-height:1}
+    gap:3px; color:var(--faint); font-size:10px; font-weight:600; letter-spacing:.2px; white-space:nowrap}
+  nav.tabs button .i{font-size:20px; line-height:1}
   nav.tabs button.on{color:var(--accent)}
 
   /* ---- workout fullscreen overlay ---- */
@@ -271,6 +298,26 @@
     <div id="taken-list"></div>
   </section>
 
+  <!-- ============ WEEKMENU ============ -->
+  <section class="view" id="view-menu">
+    <div class="weeknav">
+      <button id="wk-prev" aria-label="Vorige week">◀</button>
+      <div class="wk-mid">
+        <div class="wk-range" id="wk-range">—</div>
+        <label class="wk-start">Startdag
+          <input type="date" id="wk-startdatum" />
+        </label>
+      </div>
+      <button id="wk-next" aria-label="Volgende week">▶</button>
+    </div>
+    <div id="menu-dagen"></div>
+
+    <h2 class="section">Mijn gerechten</h2>
+    <button class="btn block" id="new-gerecht-btn" style="margin-bottom:14px">＋ Gerecht toevoegen</button>
+    <div id="gerechten-list"></div>
+    <datalist id="gerechten-namen"></datalist>
+  </section>
+
   <!-- ============ VOORTGANG ============ -->
   <section class="view" id="view-voortgang">
     <div class="statgrid">
@@ -331,6 +378,7 @@
     <button data-v="vandaag" class="on"><span class="i">🎯</span>Vandaag</button>
     <button data-v="routines"><span class="i">📋</span>Routines</button>
     <button data-v="taken"><span class="i">✅</span>Taken</button>
+    <button data-v="menu"><span class="i">🍽️</span>Menu</button>
     <button data-v="voortgang"><span class="i">📈</span>Voortgang</button>
   </nav>
 </div>
@@ -503,6 +551,37 @@
   </div>
 </div>
 
+<!-- ===== Gerecht (recept) modal ===== -->
+<div class="modal" id="modal-gerecht">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h3 id="mg-title">Nieuw gerecht</h3>
+    <div class="row" style="gap:10px">
+      <div class="fld" style="flex:0 0 84px">
+        <label>Icoon</label>
+        <input id="mg-emoji" maxlength="2" placeholder="🍝" />
+      </div>
+      <div class="fld grow">
+        <label>Naam</label>
+        <input id="mg-naam" placeholder="Bijv. Spaghetti bolognese" />
+      </div>
+    </div>
+    <div class="fld">
+      <label>Ingrediënten</label>
+      <textarea id="mg-ingredienten" style="min-height:110px" placeholder="Eén per regel, bijv.:&#10;400 g gehakt&#10;1 ui&#10;2 tenen knoflook&#10;spaghetti"></textarea>
+    </div>
+    <div class="fld">
+      <label>Bereidingswijze</label>
+      <textarea id="mg-bereiding" style="min-height:110px" placeholder="Korte stappen…"></textarea>
+    </div>
+    <div class="row" style="margin-top:4px; gap:10px">
+      <button class="btn danger" id="mg-delete">Verwijderen</button>
+      <button class="btn ghost grow" id="mg-cancel">Annuleer</button>
+      <button class="btn grow" id="mg-save">Opslaan</button>
+    </div>
+  </div>
+</div>
+
 <div class="flash" id="flash"></div>
 
 <script>
@@ -567,6 +646,12 @@ function defaultData(){
     ],
     voortgang: { sessies: [], streakLangste: 0 },
     lichaam: { lengteCm:null, streefKg:null, metingen:[] }, // metingen: [{datum, kg}]
+    diners: {},   // { "2026-08-30": { gerecht:"...", receptId:null } }
+    gerechten: [  // receptenboekje — alleen gerechten die je wilt bewaren
+      {id:uid(), naam:"Spaghetti bolognese", emoji:"🍝",
+       ingredienten:"400 g gehakt\n1 ui\n2 tenen knoflook\n1 blik tomatenblokjes\nspaghetti\nParmezaan",
+       bereiding:"Fruit ui en knoflook. Bak het gehakt rul. Voeg tomaten toe en laat 20 min pruttelen. Kook de spaghetti. Serveer met kaas."}
+    ],
     instellingen: { geluid:true, trillen:true },
     // per-dag voltooiing van routines: { "2026-08-28": [routineId,...] }
     voltooid: {}
@@ -587,6 +672,8 @@ function load(){
   D.instellingen ||= {geluid:true, trillen:true};
   D.lichaam ||= {lengteCm:null, streefKg:null, metingen:[]};
   if(!Array.isArray(D.lichaam.metingen)) D.lichaam.metingen = [];
+  D.diners ||= {};
+  D.gerechten ||= [];
   D.voltooid ||= {};
   // migratie: routine.dagelijks (boolean) -> routine.dagen (weekdag-indices, ma=0..zo=6)
   D.routines.forEach(r=>{
@@ -688,6 +775,7 @@ function switchView(v){
   if(v==="vandaag") renderVandaag();
   if(v==="routines") renderRoutines();
   if(v==="taken") renderTaken();
+  if(v==="menu") renderMenu();
   if(v==="voortgang") renderVoortgang();
   window.scrollTo(0,0);
 }
@@ -1140,6 +1228,134 @@ $("#mt-save").onclick = ()=>{
     D.taken.push({id:uid(), klaar:false, ...data});
   }
   save(); hideModal("modal-taak"); renderTaken(); renderVandaag(); flash("Opgeslagen ✓");
+};
+
+/* ============================================================
+   WEEKMENU + GERECHTEN
+============================================================ */
+function addDays(iso, n){ const d=new Date(iso+"T00:00:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function recentSaturday(){ const d=new Date(); const back=(d.getDay()-6+7)%7; d.setDate(d.getDate()-back); return d.toISOString().slice(0,10); }
+function fmtDagShort(iso){ return new Date(iso+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"long"}); }
+function fmtDagDatum(iso){ return new Date(iso+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"}); }
+let menuStart = recentSaturday();
+
+function renderMenu(){
+  $("#wk-startdatum").value = menuStart;
+  const eind = addDays(menuStart, 6);
+  $("#wk-range").textContent = fmtDagDatum(menuStart) + " – " + fmtDagDatum(eind);
+  // datalist met opgeslagen gerechten
+  $("#gerechten-namen").innerHTML = D.gerechten.map(g=>`<option value="${esc(g.naam)}"></option>`).join("");
+
+  const host = $("#menu-dagen"); host.innerHTML="";
+  for(let i=0;i<7;i++){
+    const iso = addDays(menuStart, i);
+    const entry = D.diners[iso] || {gerecht:"", receptId:null};
+    const recept = entry.receptId ? D.gerechten.find(g=>g.id===entry.receptId) : null;
+    const heeftTekst = (entry.gerecht||"").trim().length>0;
+    const row = document.createElement("div");
+    row.className = "mday" + (iso===todayISO() ? " today" : "");
+    row.innerHTML = `
+      <div class="dnaam"><b>${fmtDagShort(iso)}</b>${fmtDagDatum(iso)}</div>
+      <input class="dish" list="gerechten-namen" placeholder="avondeten…" value="${esc(entry.gerecht||"")}" />
+      <button class="rc ${recept?'linked':''}" title="${recept?'Recept bekijken':'Opslaan als gerecht'}">${recept?'📖':(heeftTekst?'🔖':'')}</button>`;
+    const inp = row.querySelector(".dish");
+    inp.addEventListener("input", ()=> setDiner(iso, inp.value));
+    row.querySelector(".rc").onclick = ()=>{
+      const e = D.diners[iso] || {gerecht:"", receptId:null};
+      if(e.receptId && D.gerechten.find(g=>g.id===e.receptId)) openGerechtModal(e.receptId);
+      else if((e.gerecht||"").trim()) openGerechtModal(null, e.gerecht.trim(), iso);
+      else flash("Vul eerst een gerecht in");
+    };
+    host.appendChild(row);
+  }
+  renderGerechten();
+}
+function setDiner(iso, waarde){
+  const v = waarde.trim();
+  if(!v){ delete D.diners[iso]; save(); return; }
+  const e = D.diners[iso] || {gerecht:"", receptId:null};
+  e.gerecht = v;
+  // koppel automatisch aan een bestaand gerecht met dezelfde naam
+  const match = D.gerechten.find(g=>g.naam.toLowerCase()===v.toLowerCase());
+  e.receptId = match ? match.id : null;
+  D.diners[iso] = e;
+  save();
+  // herteken alleen de knop-status van deze rij (zonder focus te verliezen)
+  const rows = $$("#menu-dagen .mday");
+  const idx = Math.round((new Date(iso+"T00:00:00") - new Date(menuStart+"T00:00:00"))/86400000);
+  const btn = rows[idx] && rows[idx].querySelector(".rc");
+  if(btn){ btn.textContent = match ? "📖" : (v?"🔖":""); btn.classList.toggle("linked", !!match); }
+}
+$("#wk-prev").onclick = ()=>{ menuStart = addDays(menuStart, -7); renderMenu(); };
+$("#wk-next").onclick = ()=>{ menuStart = addDays(menuStart, 7); renderMenu(); };
+$("#wk-startdatum").addEventListener("change", ()=>{ if($("#wk-startdatum").value){ menuStart = $("#wk-startdatum").value; renderMenu(); } });
+
+/* ---- gerechten (recepten) ---- */
+function renderGerechten(){
+  const host = $("#gerechten-list"); host.innerHTML="";
+  if(D.gerechten.length===0){
+    host.innerHTML = `<div class="empty">Nog geen opgeslagen gerechten.<br>Vul een avondeten in en tik 🔖 om het te bewaren met ingrediënten en bereiding.</div>`;
+    return;
+  }
+  D.gerechten.slice().sort((a,b)=>a.naam.localeCompare(b.naam)).forEach(g=>{
+    const el = document.createElement("div");
+    el.className="gerecht";
+    const nIng = (g.ingredienten||"").split("\n").filter(x=>x.trim()).length;
+    el.innerHTML = `
+      <div class="em">${g.emoji||"🍽️"}</div>
+      <div class="gnaam">
+        <div class="t">${esc(g.naam)}</div>
+        <div class="s">${nIng? nIng+" ingrediënten":"geen ingrediënten"}${g.bereiding?" · met bereiding":""}</div>
+      </div>
+      <button class="btn ghost sm">Bekijk</button>`;
+    el.querySelector("button").onclick = ()=>openGerechtModal(g.id);
+    host.appendChild(el);
+  });
+}
+$("#new-gerecht-btn").onclick = ()=>openGerechtModal(null);
+
+let editGerechtId = null, gerechtLinkDatum = null;
+function openGerechtModal(id, prefillNaam, linkDatum){
+  editGerechtId = id; gerechtLinkDatum = linkDatum || null;
+  const g = id ? D.gerechten.find(x=>x.id===id) : {emoji:"", naam:prefillNaam||"", ingredienten:"", bereiding:""};
+  $("#mg-title").textContent = id ? "Gerecht bewerken" : "Nieuw gerecht";
+  $("#mg-emoji").value = g.emoji||"";
+  $("#mg-naam").value = g.naam||"";
+  $("#mg-ingredienten").value = g.ingredienten||"";
+  $("#mg-bereiding").value = g.bereiding||"";
+  $("#mg-delete").style.display = id ? "" : "none";
+  showModal("modal-gerecht");
+}
+$("#mg-cancel").onclick = ()=>hideModal("modal-gerecht");
+$("#mg-delete").onclick = ()=>{
+  if(editGerechtId){
+    D.gerechten = D.gerechten.filter(g=>g.id!==editGerechtId);
+    // ontkoppel diners die naar dit gerecht wezen
+    Object.values(D.diners).forEach(d=>{ if(d.receptId===editGerechtId) d.receptId=null; });
+    save();
+  }
+  hideModal("modal-gerecht"); renderMenu(); flash("Gerecht verwijderd");
+};
+$("#mg-save").onclick = ()=>{
+  const naam = $("#mg-naam").value.trim();
+  if(!naam){ flash("Geef het gerecht een naam"); return; }
+  const data = {
+    emoji: $("#mg-emoji").value.trim(),
+    naam,
+    ingredienten: $("#mg-ingredienten").value.trim(),
+    bereiding: $("#mg-bereiding").value.trim()
+  };
+  let gid = editGerechtId;
+  if(editGerechtId){
+    Object.assign(D.gerechten.find(g=>g.id===editGerechtId), data);
+  } else {
+    gid = uid(); D.gerechten.push({id:gid, ...data});
+  }
+  // koppel aan de dag van waaruit we opsloegen
+  if(gerechtLinkDatum){
+    D.diners[gerechtLinkDatum] = {gerecht:naam, receptId:gid};
+  }
+  save(); hideModal("modal-gerecht"); renderMenu(); flash("Gerecht opgeslagen ✓");
 };
 
 /* ============================================================
