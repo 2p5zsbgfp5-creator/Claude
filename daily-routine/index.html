@@ -274,7 +274,7 @@
   <!-- ============ VANDAAG ============ -->
   <section class="view active" id="view-vandaag">
     <div class="hero">
-      <div class="flame" id="hero-flame">🔥</div>
+      <div class="flame" id="hero-flame">⚡</div>
       <div>
         <div class="n" id="streak-n">0</div>
         <div class="lbl">dagen streak</div>
@@ -772,7 +772,12 @@ function buildDoc(){
   const style = document.getElementById("app-css");
   const styleHtml = style ? style.outerHTML : "";
   const stateJson = jsonSafe(D);
-  const body = PRISTINE_BODY.replace(
+  // De publisher plaatst onze <title>/<style> in de <body>; strip die uit de
+  // body-snapshot zodat ze niet dubbel raken (en de pagina niet groeit).
+  let body = PRISTINE_BODY
+    .replace(/<title>[\s\S]*?<\/title>/i, "")
+    .replace(/<style id="app-css">[\s\S]*?<\/style>/i, "");
+  body = body.replace(
     /(<script id="app-state" type="application\/json">)[\s\S]*?(<\/script>)/,
     function(m,a,b){ return a + stateJson + b; }
   );

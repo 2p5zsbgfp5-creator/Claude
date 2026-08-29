@@ -1,4 +1,4 @@
-# Planning 🔥
+# Planning ⚡
 
 Een simpele, mobielvriendelijke web-app voor je dagelijkse routines (met een korte,
 max. ~10 min oefenroutine), een takenlijst, een weekmenu en je voortgang. Geen account,
