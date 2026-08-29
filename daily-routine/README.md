@@ -51,11 +51,15 @@ Het is één self-contained bestand.
   # open http://localhost:8000
   ```
 
-> Let op: de data hoort bij de plek waar je de app opent (browser + link). Open je hem op
-> een ander apparaat of via een andere link, dan begin je daar met een schone lijst.
-> Gebruik **Voortgang → Backup exporteren** om je gegevens veilig te stellen.
+> **Opslag:** in de gepubliceerde app worden je gegevens **server-side bewaard** in je (privé)
+> artifact via de `artifact`-capability (een databestand `data/state.json` dat na een wijziging
+> wordt bijgewerkt). Zo blijven ze behouden na sluiten/heropnieuw en werken ze **cross-device**
+> wanneer je dezelfde app-link opent. `localStorage` wordt als snelle lokale cache/terugval
+> gebruikt (en is de opslag als je het bestand standalone/zelf-gehost opent). **Voortgang →
+> Backup exporteren** blijft als handmatige veiligheidsklep.
 
 ## Techniek
 
 Vanilla HTML/CSS/JavaScript, geen build-stap en geen dependencies. Geluid via de WebAudio-API,
-trillen via de Vibration-API (waar ondersteund). Opslag via `localStorage`.
+trillen via de Vibration-API (waar ondersteund). Opslag: `artifact`-capability (cloud) in de
+gepubliceerde app, met `localStorage` als terugval.

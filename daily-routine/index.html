@@ -258,6 +258,11 @@
     background:var(--panel2); border:1px solid var(--line2); color:var(--txt); padding:11px 18px; border-radius:30px;
     font-size:14px; z-index:120; opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; white-space:nowrap}
   .flash.show{opacity:1; transform:translateX(-50%) translateY(-4px)}
+  .saved{position:fixed; top:calc(var(--safe-t) + 12px); right:14px; z-index:120;
+    background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent-d);
+    padding:6px 12px; border-radius:20px; font-size:12px; font-weight:700;
+    opacity:0; transform:translateY(-6px); transition:opacity .2s, transform .2s; pointer-events:none}
+  .saved.show{opacity:1; transform:none}
 </style>
 </head>
 <body>
@@ -593,6 +598,7 @@
   </div>
 </div>
 
+<div class="saved" id="saved">Opgeslagen ☁︎</div>
 <div class="flash" id="flash"></div>
 
 <script>
@@ -669,14 +675,23 @@ function defaultData(){
   };
 }
 
-/* ---------- storage ---------- */
+/* ---------- storage ----------
+   Twee lagen:
+   1) localStorage — snel + werkt standalone (repo-bestand), maar in de
+      afgeschermde Artifact-iframe niet altijd beschikbaar/blijvend.
+   2) artifact-capability (cloud) — bewaart een databestand server-side in dit
+      (privé) artifact, overleeft herladen/herpubliceren en werkt cross-device.
+   De cloud is leidend zodra hij beschikbaar is; anders valt alles terug op
+   localStorage.                                                               */
 let D;
-function load(){
-  try{
-    const raw = localStorage.getItem(LS_KEY);
-    if(raw){ D = JSON.parse(raw); }
-  }catch(e){ D = null; }
-  if(!D || typeof D !== "object"){ D = defaultData(); save(); }
+const STATE_PATH = "data/state.json";
+let artCap = null;        // opgeloste artifact-capability, of null
+let cloudReady = false;   // capability bruikbaar in deze view
+let dirty = false;        // gebruiker wijzigde iets sinds laden
+let cloudTimer = null, cloudSaving = false, cloudPending = false;
+
+function normalize(){
+  if(!D || typeof D !== "object") D = defaultData();
   // vul ontbrekende velden aan (voorwaartse compatibiliteit)
   D.routines ||= []; D.taken ||= [];
   D.voortgang ||= {sessies:[], streakLangste:0};
@@ -696,8 +711,73 @@ function load(){
   // migratie: taken krijgen icoon + context
   D.taken.forEach(t=>{ if(t.icoon==null) t.icoon=""; if(t.context==null) t.context=""; });
 }
-function save(){
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ D = JSON.parse(raw); }
+  }catch(e){ D = null; }
+  normalize();
+}
+function saveLocalOnly(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(D)); }catch(e){}
+}
+function save(){
+  saveLocalOnly();
+  dirty = true;
+  scheduleCloudSave();
+}
+
+/* ---- cloud (artifact-capability) ---- */
+async function initCloud(){
+  if(!(window.claude && typeof window.claude.use === "function")) return;
+  let art = null;
+  try{ art = await claude.use("artifact"); }catch(e){ art = null; }
+  if(!art) return;                 // geen cloud in deze view -> localStorage blijft leidend
+  artCap = art; cloudReady = true;
+  // Server-state is de bron van waarheid — maar alleen overnemen als de gebruiker
+  // sinds laden nog niets heeft gewijzigd (anders lokale wijziging behouden + pushen).
+  try{
+    const res = await fetch(STATE_PATH, {cache:"no-store"});
+    if(res.ok && !dirty){
+      const remote = await res.json();
+      if(remote && typeof remote === "object"){
+        D = remote; normalize(); recalcStreak(); saveLocalOnly();
+        renderCurrent();
+      }
+    }
+  }catch(e){ /* nog geen databestand (eerste keer) of niet ophaalbaar */ }
+  if(dirty) scheduleCloudSave(true);   // vroege wijziging alsnog wegschrijven
+}
+function scheduleCloudSave(immediate){
+  if(!cloudReady || !artCap) return;
+  clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(cloudSave, immediate ? 0 : 1500);
+}
+async function cloudSave(){
+  if(!cloudReady || !artCap) return;
+  if(cloudSaving){ cloudPending = true; return; }
+  cloudSaving = true;
+  try{
+    await artCap.publish({ [STATE_PATH]: JSON.stringify(D) });
+    setSaved();
+  }catch(e){
+    const code = e && e.code;
+    if(code === "conflict"){ /* deze view herlaadt vanzelf naar de winnaar */ }
+    else if(code === "rate_limited"){ clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudSave, 8000); }
+    // overige fouten: stil; localStorage heeft de wijziging al
+  }finally{
+    cloudSaving = false;
+    if(cloudPending){ cloudPending = false; scheduleCloudSave(true); }
+  }
+}
+function renderCurrent(){
+  const active = document.querySelector(".view.active");
+  const v = active ? active.id.replace("view-","") : "vandaag";
+  if(v==="vandaag") renderVandaag();
+  else if(v==="routines") renderRoutines();
+  else if(v==="taken") renderTaken();
+  else if(v==="menu") renderMenu();
+  else if(v==="voortgang") renderVoortgang();
 }
 
 /* ---------- helpers ---------- */
@@ -755,6 +835,12 @@ let flashT;
 function flash(msg){
   const f = $("#flash"); f.textContent = msg; f.classList.add("show");
   clearTimeout(flashT); flashT = setTimeout(()=>f.classList.remove("show"), 1600);
+}
+let savedT;
+function setSaved(){
+  const el = $("#saved"); if(!el) return;
+  el.classList.add("show");
+  clearTimeout(savedT); savedT = setTimeout(()=>el.classList.remove("show"), 1400);
 }
 function buzz(ms){ if(D.instellingen.trillen && navigator.vibrate) navigator.vibrate(ms); }
 
@@ -1515,8 +1601,9 @@ function init(){
   $("#today-date").textContent = fmtDateNL(new Date());
   $("#sw-geluid").classList.toggle("on", D.instellingen.geluid);
   $("#sw-trillen").classList.toggle("on", D.instellingen.trillen);
-  recalcStreak(); save();
+  recalcStreak(); saveLocalOnly();   // niet publiceren op laden
   switchView("vandaag");
+  initCloud();                        // async: neem server-state over zodra beschikbaar
 }
 init();
 </script>
