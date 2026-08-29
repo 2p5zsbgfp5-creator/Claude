@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Planning" />
 <link rel="manifest" href="manifest.json" />
 <title>Planning</title>
-<style>
+<style id="app-css">
   :root{
     --bg:#0d1411; --bg2:#121b16; --panel:#16211b; --panel2:#1c2b23;
     --line:#26382e; --line2:#2f4a3b;
@@ -372,9 +372,10 @@
       <div class="toggle"><span>🔊 Geluid</span><div class="sw" id="sw-geluid"></div></div>
       <div class="toggle"><span>📳 Trillen</span><div class="sw" id="sw-trillen"></div></div>
     </div>
+    <p class="small faint" id="opslag-status" style="margin:2px 2px 12px">Opslag: —</p>
     <button class="btn ghost block" id="export-btn" style="margin-bottom:10px">⬇︎ Backup exporteren</button>
     <button class="btn danger block" id="reset-btn">Alles wissen</button>
-    <p class="center faint small" style="margin-top:18px">Data blijft lokaal op dit apparaat</p>
+    <p class="center faint small" style="margin-top:18px">Planning</p>
   </section>
 
   <nav class="tabs">
@@ -601,7 +602,12 @@
 <div class="saved" id="saved">Opgeslagen ☁︎</div>
 <div class="flash" id="flash"></div>
 
-<script>
+<!-- Blijvende opslag: files-vorm laadt hier window.__APP_STATE__ (kan 404'en vóór de eerste opslag) -->
+<script src="data/state.js"></script>
+<!-- Pagina-vorm: de ingebedde state (fallback) -->
+<script id="app-state" type="application/json"></script>
+
+<script id="app-js">
 "use strict";
 /* ============================================================
    Planning — self-contained routine & taken app
@@ -684,11 +690,17 @@ function defaultData(){
    De cloud is leidend zodra hij beschikbaar is; anders valt alles terug op
    localStorage.                                                               */
 let D;
-const STATE_PATH = "data/state.json";
+const DATA_JS_PATH = "data/state.js";
 let artCap = null;        // opgeloste artifact-capability, of null
 let cloudReady = false;   // capability bruikbaar in deze view
 let dirty = false;        // gebruiker wijzigde iets sinds laden
 let cloudTimer = null, cloudSaving = false, cloudPending = false;
+let cloudMode = "lokaal"; // status voor de gebruiker
+// Snapshot van de authored body (leeg, vóór render) — nodig om de volledige
+// pagina te kunnen herpubliceren (fallback). Gezet onderaan bij INIT.
+let PRISTINE_BODY = "";
+
+function jsonSafe(obj){ return JSON.stringify(obj).replace(/</g, "\\u003c"); }
 
 function normalize(){
   if(!D || typeof D !== "object") D = defaultData();
@@ -711,11 +723,20 @@ function normalize(){
   // migratie: taken krijgen icoon + context
   D.taken.forEach(t=>{ if(t.icoon==null) t.icoon=""; if(t.context==null) t.context=""; });
 }
+
+// Lees de door de cloud meegeleverde state — zónder fetch:
+//  1) files-vorm: data/state.js heeft window.__APP_STATE__ gezet
+//  2) pagina-vorm: <script id="app-state"> bevat de JSON
+function readServedState(){
+  try{ if(window.__APP_STATE__ && typeof window.__APP_STATE__ === "object") return window.__APP_STATE__; }catch(e){}
+  const el = document.getElementById("app-state");
+  if(el){ const t = (el.textContent||"").trim(); if(t){ try{ return JSON.parse(t); }catch(e){} } }
+  return null;
+}
 function load(){
-  try{
-    const raw = localStorage.getItem(LS_KEY);
-    if(raw){ D = JSON.parse(raw); }
-  }catch(e){ D = null; }
+  let src = readServedState();          // cloud/meegeleverde state is leidend
+  if(!src){ try{ const raw = localStorage.getItem(LS_KEY); if(raw) src = JSON.parse(raw); }catch(e){} }
+  D = src || defaultData();
   normalize();
 }
 function saveLocalOnly(){
@@ -729,50 +750,74 @@ function save(){
 
 /* ---- cloud (artifact-capability) ---- */
 async function initCloud(){
-  if(!(window.claude && typeof window.claude.use === "function")) return;
+  if(!(window.claude && typeof window.claude.use === "function")){ cloudMode="lokaal (dit apparaat)"; updateOpslagStatus(); return; }
+  cloudMode = "verbinden…"; updateOpslagStatus();
   let art = null;
   try{ art = await claude.use("artifact"); }catch(e){ art = null; }
-  if(!art) return;                 // geen cloud in deze view -> localStorage blijft leidend
-  artCap = art; cloudReady = true;
-  // Server-state is de bron van waarheid — maar alleen overnemen als de gebruiker
-  // sinds laden nog niets heeft gewijzigd (anders lokale wijziging behouden + pushen).
-  try{
-    const res = await fetch(STATE_PATH, {cache:"no-store"});
-    if(res.ok && !dirty){
-      const remote = await res.json();
-      if(remote && typeof remote === "object"){
-        D = remote; normalize(); recalcStreak(); saveLocalOnly();
-        renderCurrent();
-      }
-    }
-  }catch(e){ /* nog geen databestand (eerste keer) of niet ophaalbaar */ }
-  if(dirty) scheduleCloudSave(true);   // vroege wijziging alsnog wegschrijven
+  if(!art){ cloudMode="lokaal (cloud niet beschikbaar)"; updateOpslagStatus(); return; }
+  artCap = art; cloudReady = true; cloudMode = "cloud actief"; updateOpslagStatus();
+  if(dirty) scheduleCloudSave(true);    // vroege wijziging alsnog wegschrijven
 }
 function scheduleCloudSave(immediate){
   if(!cloudReady || !artCap) return;
   clearTimeout(cloudTimer);
   cloudTimer = setTimeout(cloudSave, immediate ? 0 : 1500);
 }
+function currentTab(){
+  const a = document.querySelector(".view.active");
+  return a ? a.id.replace("view-","") : "vandaag";
+}
+// Bouw de volledige vervangende pagina (fallback), met de state ingebed.
+function buildDoc(){
+  const style = document.getElementById("app-css");
+  const styleHtml = style ? style.outerHTML : "";
+  const stateJson = jsonSafe(D);
+  const body = PRISTINE_BODY.replace(
+    /(<script id="app-state" type="application\/json">)[\s\S]*?(<\/script>)/,
+    function(m,a,b){ return a + stateJson + b; }
+  );
+  return '<!doctype html>\n<html lang="nl">\n<head>\n'
+    + '<meta charset="utf-8"/>\n'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"/>\n'
+    + '<meta name="theme-color" content="#0d1411"/>\n'
+    + '<meta name="apple-mobile-web-app-capable" content="yes"/>\n'
+    + '<meta name="apple-mobile-web-app-title" content="Planning"/>\n'
+    + styleHtml + '\n<title>Planning</title>\n</head>\n<body>\n'
+    + body + '\n</body>\n</html>';
+}
 async function cloudSave(){
   if(!cloudReady || !artCap) return;
   if(cloudSaving){ cloudPending = true; return; }
   cloudSaving = true;
   try{
-    await artCap.publish({ [STATE_PATH]: JSON.stringify(D) });
-    setSaved();
+    // 1) files-vorm: klein databestand, herlaadt deze view NIET
+    await artCap.publish({ [DATA_JS_PATH]: "window.__APP_STATE__=" + jsonSafe(D) + ";" });
+    cloudMode = "cloud opgeslagen ✓"; setSaved(); updateOpslagStatus();
   }catch(e){
     const code = e && e.code;
     if(code === "conflict"){ /* deze view herlaadt vanzelf naar de winnaar */ }
     else if(code === "rate_limited"){ clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudSave, 8000); }
-    // overige fouten: stil; localStorage heeft de wijziging al
+    else if(code==="capability_disabled"||code==="capability_removed"||code==="transform_error"||code==="invalid_content"||code==="read_only_path"){
+      // files-vorm niet beschikbaar -> volledige pagina publiceren (herlaadt de view)
+      try{
+        try{ sessionStorage.setItem("od_saved","1"); sessionStorage.setItem("od_tab", currentTab()); }catch(_){}
+        await artCap.publish(buildDoc());
+        cloudMode = "cloud opgeslagen ✓ (pagina)"; updateOpslagStatus();
+      }catch(e2){ cloudMode = "cloud-fout: " + ((e2&&e2.code)||"?"); updateOpslagStatus(); }
+    } else {
+      cloudMode = "cloud-fout: " + (code||"?"); updateOpslagStatus();
+    }
   }finally{
     cloudSaving = false;
     if(cloudPending){ cloudPending = false; scheduleCloudSave(true); }
   }
 }
+function updateOpslagStatus(){
+  const el = document.getElementById("opslag-status");
+  if(el) el.textContent = "Opslag: " + cloudMode;
+}
 function renderCurrent(){
-  const active = document.querySelector(".view.active");
-  const v = active ? active.id.replace("view-","") : "vandaag";
+  const v = currentTab();
   if(v==="vandaag") renderVandaag();
   else if(v==="routines") renderRoutines();
   else if(v==="taken") renderTaken();
@@ -1356,7 +1401,7 @@ function renderMenu(){
       <input class="dish" list="gerechten-namen" placeholder="avondeten…" value="${esc(entry.gerecht||"")}" />
       <button class="rc ${recept?'linked':''}" title="${recept?'Recept bekijken':'Opslaan als gerecht'}">${recept?'📖':(heeftTekst?'🔖':'')}</button>`;
     const inp = row.querySelector(".dish");
-    inp.addEventListener("input", ()=> setDiner(iso, inp.value));
+    inp.addEventListener("change", ()=> setDiner(iso, inp.value));
     row.querySelector(".rc").onclick = ()=>{
       const e = D.diners[iso] || {gerecht:"", receptId:null};
       if(e.receptId && D.gerechten.find(g=>g.id===e.receptId)) openGerechtModal(e.receptId);
@@ -1539,8 +1584,8 @@ function renderLichaam(){
     host.appendChild(row);
   }
 }
-$("#lc-lengte").addEventListener("input", ()=>{ D.lichaam.lengteCm = parseFloat($("#lc-lengte").value)||null; save(); renderLichaam(); });
-$("#lc-streef").addEventListener("input", ()=>{ D.lichaam.streefKg = parseFloat($("#lc-streef").value)||null; save(); renderLichaam(); });
+$("#lc-lengte").addEventListener("change", ()=>{ D.lichaam.lengteCm = parseFloat($("#lc-lengte").value)||null; save(); renderLichaam(); });
+$("#lc-streef").addEventListener("change", ()=>{ D.lichaam.streefKg = parseFloat($("#lc-streef").value)||null; save(); renderLichaam(); });
 $("#lc-log").onclick = ()=>{
   const kg = parseFloat($("#lc-gewicht").value);
   if(!(kg>0)){ flash("Vul een gewicht in"); return; }
@@ -1597,13 +1642,20 @@ function capital(s){ return s?s.charAt(0).toUpperCase()+s.slice(1):""; }
    INIT
 ============================================================ */
 function init(){
+  // Snapshot van de authored body (leeg, vóór render) — voor de pagina-fallback-publish.
+  PRISTINE_BODY = document.body.innerHTML;
   load();
   $("#today-date").textContent = fmtDateNL(new Date());
   $("#sw-geluid").classList.toggle("on", D.instellingen.geluid);
   $("#sw-trillen").classList.toggle("on", D.instellingen.trillen);
   recalcStreak(); saveLocalOnly();   // niet publiceren op laden
-  switchView("vandaag");
-  initCloud();                        // async: neem server-state over zodra beschikbaar
+  // tab herstellen na een pagina-publish-reload
+  let startTab = "vandaag";
+  try{ const t = sessionStorage.getItem("od_tab"); if(t){ startTab = t; sessionStorage.removeItem("od_tab"); } }catch(e){}
+  switchView(startTab);
+  try{ if(sessionStorage.getItem("od_saved")){ sessionStorage.removeItem("od_saved"); setSaved(); } }catch(e){}
+  updateOpslagStatus();
+  initCloud();                        // async: cloud markeren + vroege wijziging pushen
 }
 init();
 </script>
