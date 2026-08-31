@@ -55,16 +55,22 @@ create policy "eigen rij wijzigen" on public.app_state
 De publieke `anon`-key mag hierna gerust in de app staan: zónder ingelogde gebruiker
 geeft Row Level Security niets terug, en met inloggen zie je alleen je eigen rij.
 
-### 3. Zet inloggen via e-mail (magic link) aan
+### 3. Zet inloggen met e-mail + zelfgekozen code aan (géén mail)
 
-1. **Authentication → Providers → Email**: zorg dat **Email** aanstaat.
-   (Standaard staat "Confirm email" aan; magic links werken daarmee.)
-2. **Authentication → URL Configuration → Redirect URLs**: voeg de adressen toe waar
-   je de app opent, bijvoorbeeld:
-   - `http://localhost:8000` (lokaal testen)
-   - `https://<jouw-gebruikersnaam>.github.io/<repo>/planning/` (op GitHub Pages)
+De app logt in met je **e‑mailadres + een code die je zelf kiest** (een wachtwoord),
+volledig in de app — er wordt geen mail verstuurd. Daarvoor moet e‑mailbevestiging uit:
 
-   Zonder deze URL's weigert Supabase de inloglink terug te sturen.
+1. **Authentication → Providers → Email** (of **Sign In / Providers → Email**): zorg dat
+   **Email** aanstaat.
+2. Zet **"Confirm email" UIT**. Dan maakt aanmelden meteen een actieve sessie zonder
+   bevestigingsmail, zodat je puur met je e‑mail + code inlogt.
+
+> Geen custom SMTP of e‑mailsjablonen nodig. Op het gratis niveau kun je die toch niet
+> aanpassen — deze methode omzeilt dat volledig.
+>
+> Beveiliging: zonder e‑mailbevestiging kan in principe iedereen een account aanmaken,
+> maar door Row Level Security ziet elk account alleen de **eigen** gegevens. Kies een
+> code die je verder nergens gebruikt.
 
 ### 4. Vul je twee sleutels in `config.js`
 
@@ -78,7 +84,7 @@ Open `config.js` en vervang de placeholders:
 ```js
 window.PLANNING_CONFIG = {
   SUPABASE_URL:      "https://abcdxyz.supabase.co",
-  SUPABASE_ANON_KEY: "eyJ...."          // de lange anon-key
+  SUPABASE_ANON_KEY: "sb_publishable_...."   // de publishable/anon-key
 };
 ```
 
@@ -95,7 +101,7 @@ en kies **Zet op beginscherm** — dan opent hij fullscreen en offline.
 
 ## Zelf uitproberen / lokaal draaien
 
-Niet dubbelklikken (`file://` werkt niet voor de service worker en de inloglink).
+Niet dubbelklikken (`file://` werkt niet voor de service worker en het inloggen).
 Serveer de map:
 
 ```bash
@@ -120,6 +126,6 @@ python3 -m http.server 8000
 ## Techniek
 
 Vanilla HTML/CSS/JavaScript, geen build-stap. Cloud via `@supabase/supabase-js`
-(CDN). Auth via Supabase magic link. `sw.js` cachet alleen de app-schil (nooit je
+(CDN). Auth via Supabase e‑mail + wachtwoord (in-app, zonder mail). `sw.js` cachet alleen de app-schil (nooit je
 gegevens). Opslag-laag haakt in op de bestaande `save()`/`load()`: de app-functionali-
 teit is ongewijzigd, alleen waar het naartoe wordt opgeslagen is uitgebreid.
