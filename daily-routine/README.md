@@ -2,9 +2,8 @@
 
 Een simpele, mobielvriendelijke web-app voor je dagelijkse routines (met een korte,
 max. ~10 min oefenroutine), een takenlijst, een weekmenu en je voortgang. Geen account
-en geen backend. In de gepubliceerde app bewaart hij je gegevens via de
-`artifact`-opslag (zie **Opslag** hieronder); open je het bestand lokaal, dan valt hij
-terug op `localStorage` op je eigen apparaat.
+en geen backend: je gegevens staan in de browseropslag van je eigen toestel en verlaten
+dat toestel nooit. Zie **Opslag** hieronder.
 
 ## Wat kan het
 
@@ -40,11 +39,11 @@ gerust aan, of maak je eigen niveaus op naarmate je fitter wordt.
 
 ## Openen
 
-Het is één self-contained bestand.
-
-- **Op de telefoon:** open de gepubliceerde link en kies *Toevoegen aan beginscherm* —
-  dan opent hij als een app (fullscreen, offline).
-- **Lokaal op je computer:** open `index.html` direct in je browser, of serveer de map:
+- **Op de telefoon (zo hoort het):** open <https://2p5zsbgfp5-creator.github.io/planning/>
+  en kies *Zet op beginscherm*. Daarna opent hij als een app: fullscreen, offline, en met
+  opslag die de browser niet opruimt.
+- **Lokaal op je computer:** serveer de map (niet dubbelklikken — via `file://` werkt de
+  service worker niet en is de opslag onbetrouwbaar):
 
   ```bash
   cd daily-routine
@@ -52,22 +51,35 @@ Het is één self-contained bestand.
   # open http://localhost:8000
   ```
 
-> **Opslag (v2 — betrouwbaar).** Elke opslag krijgt een **tijdstempel** (`_savedAt`). Bij het
-> openen verzamelt de app *alle* plekken waar state kan staan — het cloud-databestand
-> (`data/state-v2.js`), de in de pagina ingebedde state, `localStorage` en een
-> `sessionStorage`-stash van nog niet verzonden wijzigingen — en gebruikt simpelweg de
-> **nieuwste**. Daardoor kan een verouderde bron nooit meer winnen (dat was de oorzaak van
-> eerder gegevensverlies: het oude `data/state.json`/`state.js` had vaste voorrang).
->
-> Verder: wijzigingen worden **direct** lokaal vastgelegd én veiliggesteld vóór elke publicatie
-> (zodat een herlaad of `conflict` niets kost), bij het sluiten/achtergrond van de app wordt
-> openstaand werk weggeschreven, en in **Voortgang** staat de opslagstatus met **"Laatst
-> opgeslagen"**. Werkt de cloud niet, dan toont de app een duidelijke waarschuwing.
-> **Backup exporteren** (echte bestandsopslag) en **Backup terugzetten** staan er als noodrem;
-> de artifact-**versiegeschiedenis** is bovendien een automatisch archief.
+## Opslag (v3)
+
+De app draait op een gewoon webadres, dus opslaan is **eerste-partij browseropslag op je eigen
+toestel**: direct, synchroon, zonder netwerk. Er is niets om mee te botsen en niets dat kan
+weigeren. Elke wijziging gaat meteen naar `localStorage` én naar IndexedDB.
+
+Waarom dit anders is dan v1/v2: die versies bewaarden door de héle app opnieuw te *publiceren*
+via de artifact-capability. Dat systeem beperkt de frequentie (`rate_limited`) en laat
+botsingen (`conflict`) vervallen — allebei gedocumenteerd als normaal gedrag. Voor een app
+waar je dagelijks in werkt betekende dat stil gegevensverlies.
+
+Vangnetten:
+
+- **Dagelijkse backups** in IndexedDB (laatste 14), die meelopen met je laatste wijziging en
+  nooit door een armere versie worden overschreven.
+- **Een controle bij het opstarten.** Ziet de app minder gegevens dan de laatste backup, dan
+  gaat hij *niet* stil verder maar toont een herstelbanner met de datum van die backup.
+- **Backup exporteren / terugzetten** in Voortgang (bestand kiezen of JSON plakken).
+- In **Voortgang** staat `Opgeslagen: <datum tijd> · op dit toestel`. Heeft de browser
+  blijvende opslag geweigerd, dan waarschuwt de app dat je de app op je beginscherm moet zetten.
+
+Beperkingen, eerlijk: je gegevens staan op **dit ene toestel**. Browsergegevens wissen of je
+telefoon kwijtraken betekent gegevens kwijt — vandaar de export. En iOS ruimt opslag van gewone
+websites na ongeveer een week zonder gebruik op; dat gebeurt niet als de app op je beginscherm
+staat. *Op het beginscherm zetten is dus geen luxe maar onderdeel van de opzet.*
 
 ## Techniek
 
 Vanilla HTML/CSS/JavaScript, geen build-stap en geen dependencies. Geluid via de WebAudio-API,
-trillen via de Vibration-API (waar ondersteund). Opslag: `artifact`-capability (cloud) in de
-gepubliceerde app, met `localStorage` als terugval.
+trillen via de Vibration-API (waar ondersteund). Opslag via `localStorage` + IndexedDB, met
+`navigator.storage.persist()`. `sw.js` is een service worker die alleen de app zelf cachet
+(nooit je gegevens) zodat hij offline opent.

@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Planning" />
 <link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
 <title>Planning</title>
 <style id="app-css">
   :root{
@@ -264,6 +266,13 @@
     opacity:0; transform:translateY(-6px); transition:opacity .2s, transform .2s; pointer-events:none}
   .saved.show{opacity:1; transform:none}
   #opslag-status.warn{color:var(--warn)}
+
+  /* herstelbanner: verschijnt als de app minder data ziet dan de laatste backup */
+  #herstel-banner{margin:0 0 14px; padding:14px 15px; border-radius:14px;
+    background:#3a2a08; border:1px solid #6b4d10; color:#ffd98a}
+  #herstel-banner .t{font-weight:800; font-size:15px; margin-bottom:4px}
+  #herstel-banner .s{font-size:13px; line-height:1.45; color:#e9c98d; margin-bottom:12px}
+  #herstel-banner .row{gap:10px}
 </style>
 </head>
 <body>
@@ -271,6 +280,16 @@
   <header>
     <div class="date" id="today-date"></div>
   </header>
+
+  <!-- Vangnet: alleen zichtbaar als er data lijkt te ontbreken t.o.v. de laatste backup -->
+  <div id="herstel-banner" hidden>
+    <div class="t">⚠︎ Er lijkt data te ontbreken</div>
+    <div class="s" id="hb-tekst"></div>
+    <div class="row">
+      <button class="btn grow" id="hb-herstel">Herstellen</button>
+      <button class="btn ghost grow" id="hb-negeer">Negeren</button>
+    </div>
+  </div>
 
   <!-- ============ VANDAAG ============ -->
   <section class="view active" id="view-vandaag">
@@ -606,9 +625,14 @@
   <div class="sheet">
     <div class="grabber"></div>
     <h3>Backup terugzetten</h3>
-    <p class="muted small" style="margin:0 0 12px">Plak hieronder de inhoud van je backup-bestand (JSON). Dit vervangt je huidige gegevens.</p>
+    <p class="muted small" style="margin:0 0 12px">Kies je backup-bestand, of plak de inhoud hieronder. Dit vervangt je huidige gegevens.</p>
     <div class="fld">
-      <textarea id="mi-json" style="min-height:160px" placeholder='{"routines":[...],"taken":[...]}'></textarea>
+      <label>Backup-bestand</label>
+      <input type="file" id="mi-file" accept="application/json,.json"/>
+    </div>
+    <div class="fld">
+      <label>…of plak de JSON</label>
+      <textarea id="mi-json" style="min-height:140px" placeholder='{"routines":[...],"taken":[...]}'></textarea>
     </div>
     <div class="row" style="gap:10px">
       <button class="btn ghost grow" id="mi-cancel">Annuleer</button>
@@ -617,19 +641,19 @@
   </div>
 </div>
 
-<div class="saved" id="saved">Opgeslagen ☁︎</div>
+<div class="saved" id="saved">Opgeslagen ✓</div>
 <div class="flash" id="flash"></div>
 
-<!-- Blijvende opslag: files-vorm laadt hier window.__APP_STATE2__ (kan 404'en vóór de eerste opslag) -->
-<script src="data/state-v2.js"></script>
-<!-- Pagina-vorm: de ingebedde state (fallback) -->
-<script id="app-state" type="application/json"></script>
+<!-- Eenmalige startgegevens (overgenomen uit de vorige versie). Wordt alleen
+     gebruikt als er nog niets op dit toestel is opgeslagen. -->
+<script id="seed-state" type="application/json">{"routines":[{"id":"trj1kd5vvf3","naam":"Military Ochtend","type":"timer","emoji":"🪖","dagdeel":"ochtend","dagen":[0,1,2,3,4,5,6],"stappen":[{"id":"fq3n0klvvf3","naam":"Jumping jacks","emoji":"🤸","werkSec":45,"rustSec":15,"instructie":"Explosief, armen helemaal boven je hoofd."},{"id":"7kradzmvvf3","naam":"Push-ups","emoji":"💪","werkSec":45,"rustSec":15,"instructie":"Rug recht, borst naar de grond. Knieën mag."},{"id":"43kd8ravvf3","naam":"Squats","emoji":"🦵","werkSec":45,"rustSec":15,"instructie":"Zak tot je dijen horizontaal zijn, hakken op de grond."},{"id":"8u9y5ouvvf3","naam":"Mountain climbers","emoji":"⛰️","werkSec":45,"rustSec":15,"instructie":"Plankpositie, knieën snel naar de borst."},{"id":"gpmvplgvvf3","naam":"Plank","emoji":"🧱","werkSec":45,"rustSec":15,"instructie":"Strak lichaam, buik en billen aanspannen."},{"id":"lc3l7aevvf3","naam":"Lunges","emoji":"🚶","werkSec":45,"rustSec":15,"instructie":"Wissel per been af, knie net boven de grond."},{"id":"l8zrvhjvvf3","naam":"High knees","emoji":"🏃","werkSec":45,"rustSec":15,"instructie":"Ter plaatse rennen, knieën hoog op."},{"id":"8zkuwjevvf3","naam":"Burpees","emoji":"🔥","werkSec":45,"rustSec":15,"instructie":"Squat, plank, push-up, sprong. Volle beweging."},{"id":"ubc4wuzvvf3","naam":"Sit-ups","emoji":"🧎","werkSec":45,"rustSec":15,"instructie":"Rustig omhoog, gecontroleerd terug."},{"id":"2c5tkrzvvf3","naam":"Superman","emoji":"🦸","werkSec":45,"rustSec":15,"instructie":"Op je buik, armen en benen tegelijk optillen."},{"id":"3b196oxvvf3","naam":"Cooldown / rekken","emoji":"🧘","werkSec":30,"rustSec":0,"instructie":"Diep ademhalen, spieren losjes uitrekken."}]},{"id":"ax8bkngvvf3","naam":"Avond voorbereiding","type":"checklist","emoji":"🌙","dagdeel":"avond","dagen":[0,1,2,3,4,5,6],"stappen":[{"id":"5cj4bftvvf3","naam":"Broodjes smeren voor morgen","emoji":"🥪","tijd":"21:00","instructie":""},{"id":"ypjn7uvvvf3","naam":"Sportkleding klaarleggen","emoji":"👕","tijd":"","instructie":""},{"id":"cu4enclvvf3","naam":"Fles water vullen","emoji":"💧","tijd":"","instructie":""},{"id":"sz8zggtvvf3","naam":"Nieuws / updates checken","emoji":"📰","tijd":"","instructie":""},{"id":"7baepygvvf3","naam":"Telefoon opladen + wekker","emoji":"⏰","tijd":"22:30","instructie":""}]}],"taken":[{"id":"4ez3e0jdpwc","klaar":false,"icoon":"🦷","tekst":"Tandarts","context":"Afspraak maken bij tandarts","termijn":"lang","vervaldatum":"2026-11-30"},{"id":"mgrh2h8qte4","klaar":false,"icoon":"","tekst":"Opzeggen Amazon prime","context":"","termijn":"kort","vervaldatum":""}],"voortgang":{"sessies":[],"streakLangste":0},"lichaam":{"lengteCm":null,"streefKg":null,"metingen":[]},"diners":{},"gerechten":[{"id":"qzfuaslvvf3","naam":"Spaghetti bolognese","emoji":"🍝","ingredienten":"400 g gehakt\n1 ui\n2 tenen knoflook\n1 blik tomatenblokjes\nspaghetti\nParmezaan","bereiding":"Fruit ui en knoflook. Bak het gehakt rul. Voeg tomaten toe en laat 20 min pruttelen. Kook de spaghetti. Serveer met kaas."}],"instellingen":{"geluid":true,"trillen":true},"voltooid":{}}</script>
 
 <script id="app-js">
 "use strict";
 /* ============================================================
    Planning — self-contained routine & taken app
-   Data: localStorage. Geen backend, werkt offline.
+   Data: browseropslag op dit toestel (localStorage + IndexedDB).
+   Geen backend, geen netwerk, werkt offline.
 ============================================================ */
 
 const LS_KEY = "ochtenddrill_v1";
@@ -695,35 +719,31 @@ function defaultData(){
     ],
     instellingen: { geluid:true, trillen:true },
     // per-dag voltooiing van routines: { "2026-08-28": [routineId,...] }
-    voltooid: {}
+    voltooid: {},
+    menu: {}, ui: {},
+    // markeert "er stond nog niets opgeslagen"; de eerste save() wist dit weer.
+    // Alleen hiermee kan de veiligheidscontrole echt gegevensverlies herkennen.
+    _fabriek: true
   };
 }
 
-/* ---------- storage ----------
-   Twee lagen:
-   1) localStorage — snel + werkt standalone (repo-bestand), maar in de
-      afgeschermde Artifact-iframe niet altijd beschikbaar/blijvend.
-   2) artifact-capability (cloud) — bewaart een databestand server-side in dit
-      (privé) artifact, overleeft herladen/herpubliceren en werkt cross-device.
-   De cloud is leidend zodra hij beschikbaar is; anders valt alles terug op
-   localStorage.                                                               */
+/* ---------- opslag ----------
+   Deze app draait op een gewoon webadres, dus de opslag is eerste-partij
+   browseropslag op dit toestel: direct, synchroon, zonder netwerk. Opslaan kan
+   niet geweigerd, uitgesteld of overruled worden — er is niets om mee te botsen.
+   Twee lagen, allebei lokaal:
+     1) localStorage — synchroon; wordt bij het opstarten meteen gelezen.
+     2) IndexedDB    — ruimer en wordt minder snel opgeruimd; vangnet + backups.
+   Plus een dagelijkse backup en een controle die weigert stil door te gaan als
+   er data lijkt te ontbreken.                                                  */
 let D;
-// v2: nieuw pad. Het oude data/state.js wordt bewust NIET meer gelezen — dat
-// bestand kon verouderd zijn en won dan van nieuwere data ("alles weg").
-const DATA_JS_PATH = "data/state-v2.js";
-const STASH_KEY = "od_stash";
-let artCap = null;        // opgeloste artifact-capability, of null
-let dlCap = null;         // downloads-capability (backup opslaan)
-let cloudReady = false;   // capability bruikbaar in deze view
-let dirty = false;        // gebruiker wijzigde iets sinds laden
-let cloudTimer = null, cloudSaving = false, cloudPending = false;
-let cloudMode = "lokaal"; // status voor de gebruiker
-let loadedFrom = "nieuw"; // waaruit de state is geladen (transparantie)
-// Snapshot van de authored body (leeg, vóór render) — nodig om de volledige
-// pagina te kunnen herpubliceren (fallback). Gezet onderaan bij INIT.
-let PRISTINE_BODY = "";
-
-function jsonSafe(obj){ return JSON.stringify(obj).replace(/</g, "\\u003c"); }
+const IDB_NAME = "planning", IDB_VER = 1, IDB_STATE = "state", IDB_BACKUPS = "backups";
+const BACKUP_MAX = 14;          // aantal dagelijkse backups dat we bewaren
+let idb = null;                 // open IndexedDB, of null als die niet kan
+let persistGranted = null;      // true / false / null (onbekend)
+let opslagFout = false;         // beide lagen weigerden te schrijven
+let backupTimer = null;
+let herstelKandidaat = null;    // backup die de herstelbanner aanbiedt
 
 function normalize(){
   if(!D || typeof D !== "object") D = defaultData();
@@ -736,6 +756,9 @@ function normalize(){
   D.diners ||= {};
   D.gerechten ||= [];
   D.voltooid ||= {};
+  D.menu ||= {};                       // weekmenu: waar je gebleven was
+  if(!D.menu.startdatum) D.menu.startdatum = recentSaturday();
+  D.ui ||= {};                         // laatst geopende tabblad
   // migratie: routine.dagelijks (boolean) -> routine.dagen (weekdag-indices, ma=0..zo=6)
   D.routines.forEach(r=>{
     if(!Array.isArray(r.dagen)){
@@ -747,133 +770,191 @@ function normalize(){
   D.taken.forEach(t=>{ if(t.icoon==null) t.icoon=""; if(t.context==null) t.context=""; });
 }
 
-/* ---- tijdstempel: maakt "nieuwste wint" mogelijk ---- */
-function stamp(){ D._savedAt = Date.now(); D._rev = (D._rev||0) + 1; }
+/* ---- IndexedDB: dunne promise-laag, faalt altijd zacht naar null/false ---- */
+function idbOpen(){
+  return new Promise(res=>{
+    let req;
+    try{ req = indexedDB.open(IDB_NAME, IDB_VER); }catch(e){ return res(null); }
+    req.onupgradeneeded = ()=>{
+      const db = req.result;
+      if(!db.objectStoreNames.contains(IDB_STATE))   db.createObjectStore(IDB_STATE);
+      if(!db.objectStoreNames.contains(IDB_BACKUPS)) db.createObjectStore(IDB_BACKUPS);
+    };
+    req.onsuccess = ()=>res(req.result);
+    req.onerror = req.onblocked = ()=>res(null);
+  });
+}
+function idbGet(store, key){
+  return new Promise(res=>{
+    if(!idb) return res(null);
+    let r;
+    try{ r = idb.transaction(store,"readonly").objectStore(store).get(key); }catch(e){ return res(null); }
+    r.onsuccess = ()=>res(r.result==null ? null : r.result);
+    r.onerror   = ()=>res(null);
+  });
+}
+function idbPut(store, key, val){
+  return new Promise(res=>{
+    if(!idb) return res(false);
+    let tx;
+    try{ tx = idb.transaction(store,"readwrite"); tx.objectStore(store).put(val, key); }
+    catch(e){ return res(false); }
+    tx.oncomplete = ()=>res(true);
+    tx.onerror = tx.onabort = ()=>res(false);
+  });
+}
+function idbDel(store, key){
+  return new Promise(res=>{
+    if(!idb) return res(false);
+    let tx;
+    try{ tx = idb.transaction(store,"readwrite"); tx.objectStore(store).delete(key); }
+    catch(e){ return res(false); }
+    tx.oncomplete = ()=>res(true);
+    tx.onerror = tx.onabort = ()=>res(false);
+  });
+}
+function idbKeys(store){
+  return new Promise(res=>{
+    if(!idb) return res([]);
+    let r;
+    try{ r = idb.transaction(store,"readonly").objectStore(store).getAllKeys(); }catch(e){ return res([]); }
+    r.onsuccess = ()=>res(r.result || []);
+    r.onerror   = ()=>res([]);
+  });
+}
+
+/* ---- laden ---- */
+function stamp(){ D._savedAt = Date.now(); D._rev = (D._rev||0) + 1; delete D._fabriek; }
 function tsOf(o){ return (o && typeof o._savedAt === "number") ? o._savedAt : 0; }
 
-// Verzamel ALLE bronnen waar state kan staan. Geen vaste voorrang meer:
-// hierna wint simpelweg de nieuwste. Een bron zonder tijdstempel telt als 0.
-function candidates(){
-  const out = [];
-  const push = (o, bron)=>{ if(o && typeof o === "object" && !Array.isArray(o)) out.push({state:o, bron, ts:tsOf(o)}); };
-  try{ push(window.__APP_STATE2__, "cloud-bestand"); }catch(e){}
-  const el = document.getElementById("app-state");
-  if(el){ const t=(el.textContent||"").trim(); if(t){ try{ push(JSON.parse(t), "cloud-pagina"); }catch(e){} } }
-  try{ const raw = localStorage.getItem(LS_KEY); if(raw) push(JSON.parse(raw), "dit apparaat"); }catch(e){}
-  try{ const raw = sessionStorage.getItem(STASH_KEY); if(raw) push(JSON.parse(raw), "niet-verzonden wijziging"); }catch(e){}
-  return out;
+// Eenmalige startgegevens, alleen gebruikt bij een lege installatie: zo begin je
+// niet opnieuw als je van de oude versie komt. Zodra je iets opslaat is dit klaar.
+function seedState(){
+  const el = document.getElementById("seed-state");
+  const t = el ? (el.textContent||"").trim() : "";
+  if(!t) return null;
+  try{
+    const o = JSON.parse(t);
+    if(o && typeof o === "object" && !Array.isArray(o)){
+      delete o._savedAt; delete o._rev;   // nog nooit op dit toestel opgeslagen
+      o._fabriek = true;
+      return o;
+    }
+  }catch(e){}
+  return null;
 }
+// Synchroon, zodat de app meteen met je gegevens opstart.
 function load(){
-  const list = candidates();
-  let best = null;
-  // >= zodat bij gelijke tijd de laatst toegevoegde bron (de stash) wint
-  for(const k of list){ if(!best || k.ts >= best.ts) best = k; }
-  D = best ? best.state : defaultData();
-  loadedFrom = best ? best.bron : "nieuw";
+  let src = null;
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw) src = JSON.parse(raw); }catch(e){}
+  if(!src || typeof src !== "object" || Array.isArray(src)) src = seedState();
+  if(!src) src = defaultData();
+  D = src;
   normalize();
 }
-function saveLocalOnly(){
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(D)); }catch(e){}
-}
-function stashPending(){
-  try{ sessionStorage.setItem(STASH_KEY, JSON.stringify(D)); }catch(e){}
-}
-function clearStash(){
-  try{ sessionStorage.removeItem(STASH_KEY); }catch(e){}
-}
-function save(){
-  stamp();               // altijd stempelen -> nieuwste wint later
-  saveLocalOnly();
-  stashPending();        // overleeft een herlaad/conflict
-  dirty = true;
-  scheduleCloudSave();
-  updateOpslagStatus();
-}
-// Tijdens typen: wél direct vastleggen (niets kan verloren gaan), maar nog niet
-// publiceren — zo herlaadt de pagina niet midden in een woord.
-function saveSoft(){
-  stamp();
-  saveLocalOnly();
-  stashPending();
-  dirty = true;
-  updateOpslagStatus();
+// Vangnet: IndexedDB wordt minder snel opgeruimd dan localStorage. Is die
+// nieuwer (localStorage gewist, quota-fout), dan nemen we die alsnog over.
+async function loadIdbFallback(){
+  const alt = await idbGet(IDB_STATE, "current");
+  if(!alt || typeof alt !== "object" || Array.isArray(alt)) return;
+  if(tsOf(alt) > tsOf(D)){
+    D = alt; normalize(); saveLocalOnly(); renderCurrent();
+  }
 }
 
-/* ---- cloud (artifact-capability) ---- */
-async function initCloud(){
-  if(!(window.claude && typeof window.claude.use === "function")){
-    cloudMode="⚠︎ alleen dit apparaat"; updateOpslagStatus(); return;
+/* ---- opslaan: synchroon, direct, kan niet geweigerd worden ---- */
+function saveLocalOnly(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(D)); return true; }catch(e){ return false; }
+}
+// Schrijft zonder tijdstempel — voor puur cosmetische state (actief tabblad).
+function saveUI(){
+  const ok = saveLocalOnly();
+  if(idb) idbPut(IDB_STATE, "current", D);
+  return ok;
+}
+function save(){
+  stamp();
+  const lsOk = saveLocalOnly();
+  setSaved();
+  updateOpslagStatus();
+  if(idb){
+    idbPut(IDB_STATE, "current", D).then(idbOk=>{
+      const fout = !lsOk && !idbOk;
+      if(fout !== opslagFout){ opslagFout = fout; updateOpslagStatus(); }
+    });
+  } else if(!lsOk && !opslagFout){
+    opslagFout = true; updateOpslagStatus();
   }
-  cloudMode = "verbinden…"; updateOpslagStatus();
-  let art = null;
-  try{ art = await claude.use("artifact"); }catch(e){ art = null; }
-  try{ dlCap = await claude.use("downloads"); }catch(e){ dlCap = null; }
-  if(!art){ cloudMode="⚠︎ alleen dit apparaat"; updateOpslagStatus(); return; }
-  artCap = art; cloudReady = true; cloudMode = "cloud"; updateOpslagStatus();
-  if(dirty) scheduleCloudSave(true);    // vroege wijziging alsnog wegschrijven
+  dagBackup();
 }
-function scheduleCloudSave(immediate){
-  if(!cloudReady || !artCap) return;
-  clearTimeout(cloudTimer);
-  cloudTimer = setTimeout(cloudSave, immediate ? 0 : 1500);
+// Bestond alleen om publicaties uit te stellen; opslaan is nu gratis en direct.
+const saveSoft = save;
+
+/* ---- dagelijkse backup + veiligheidscontrole ---- */
+// Hoeveel echte gebruikersinhoud zit er in een state? Gebruikt om te zien of er
+// iets ontbreekt t.o.v. de laatste backup.
+function omvang(s){
+  if(!s || typeof s !== "object") return 0;
+  const n = a => Array.isArray(a) ? a.length : 0;
+  return n(s.taken) + n(s.routines) + n(s.gerechten)
+       + n(s.lichaam && s.lichaam.metingen)
+       + (s.diners ? Object.keys(s.diners).length : 0)
+       + n(s.voortgang && s.voortgang.sessies);
 }
-function currentTab(){
-  const a = document.querySelector(".view.active");
-  return a ? a.id.replace("view-","") : "vandaag";
+// De backup van vandaag loopt mee met je laatste wijziging (licht uitgesteld, zodat
+// typen geen reeks schrijfacties oplevert). Hij mag alleen rijker worden: een
+// armere state overschrijft een vollere backup van dezelfde dag nooit.
+function dagBackup(){
+  if(!idb) return;
+  clearTimeout(backupTimer);
+  backupTimer = setTimeout(schrijfBackup, 2000);
 }
-// Bouw de volledige vervangende pagina (fallback), met de state ingebed.
-function buildDoc(){
-  const style = document.getElementById("app-css");
-  const styleHtml = style ? style.outerHTML : "";
-  const stateJson = jsonSafe(D);
-  // De publisher plaatst onze <title>/<style> in de <body>; strip die uit de
-  // body-snapshot zodat ze niet dubbel raken (en de pagina niet groeit).
-  let body = PRISTINE_BODY
-    .replace(/<title>[\s\S]*?<\/title>/i, "")
-    .replace(/<style id="app-css">[\s\S]*?<\/style>/i, "");
-  body = body.replace(
-    /(<script id="app-state" type="application\/json">)[\s\S]*?(<\/script>)/,
-    function(m,a,b){ return a + stateJson + b; }
-  );
-  return '<!doctype html>\n<html lang="nl">\n<head>\n'
-    + '<meta charset="utf-8"/>\n'
-    + '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"/>\n'
-    + '<meta name="theme-color" content="#0d1411"/>\n'
-    + '<meta name="apple-mobile-web-app-capable" content="yes"/>\n'
-    + '<meta name="apple-mobile-web-app-title" content="Planning"/>\n'
-    + styleHtml + '\n<title>Planning</title>\n</head>\n<body>\n'
-    + body + '\n</body>\n</html>';
+async function schrijfBackup(){
+  if(!idb) return;
+  const dag = todayISO();
+  const bestaand = await idbGet(IDB_BACKUPS, dag);
+  if(bestaand && omvang(bestaand.state) > omvang(D)) return;
+  let kopie; try{ kopie = JSON.parse(JSON.stringify(D)); }catch(e){ return; }
+  if(!await idbPut(IDB_BACKUPS, dag, {opgeslagenOp: Date.now(), state: kopie})) return;
+  const keys = (await idbKeys(IDB_BACKUPS)).slice().sort();
+  for(let i = 0; i < keys.length - BACKUP_MAX; i++) await idbDel(IDB_BACKUPS, keys[i]);
 }
-async function cloudSave(){
-  if(!cloudReady || !artCap) return;
-  if(cloudSaving){ cloudPending = true; return; }
-  cloudSaving = true;
-  stashPending();   // wijziging veiligstellen vóór elke publicatie
-  try{
-    // 1) files-vorm: klein databestand, herlaadt deze view NIET
-    await artCap.publish({ [DATA_JS_PATH]: "window.__APP_STATE2__=" + jsonSafe(D) + ";" });
-    clearStash();
-    cloudMode = "cloud"; setSaved(); updateOpslagStatus();
-  }catch(e){
-    const code = e && e.code;
-    if(code === "conflict"){ /* view herlaadt naar de winnaar; de stash bewaart onze wijziging */ }
-    else if(code === "rate_limited"){ clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudSave, 8000); }
-    else if(code==="capability_disabled"||code==="capability_removed"||code==="transform_error"||code==="invalid_content"||code==="read_only_path"){
-      // files-vorm niet beschikbaar -> volledige pagina publiceren (herlaadt de view)
-      try{
-        try{ sessionStorage.setItem("od_saved","1"); sessionStorage.setItem("od_tab", currentTab()); }catch(_){}
-        await artCap.publish(buildDoc());
-        clearStash();
-        cloudMode = "cloud"; updateOpslagStatus();
-      }catch(e2){ cloudMode = "⚠︎ fout: " + ((e2&&e2.code)||"?"); updateOpslagStatus(); }
-    } else {
-      cloudMode = "⚠︎ fout: " + (code||"?"); updateOpslagStatus();
-    }
-  }finally{
-    cloudSaving = false;
-    if(cloudPending){ cloudPending = false; scheduleCloudSave(true); }
+// Naar de achtergrond of afsluiten: backup niet laten wachten op de timer.
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState === "hidden"){ clearTimeout(backupTimer); schrijfBackup(); }
+});
+window.addEventListener("pagehide", ()=>{ clearTimeout(backupTimer); schrijfBackup(); });
+async function nieuwsteBackup(){
+  const keys = (await idbKeys(IDB_BACKUPS)).slice().sort();
+  if(!keys.length) return null;
+  const b = await idbGet(IDB_BACKUPS, keys[keys.length-1]);
+  return (b && b.state) ? {dag: keys[keys.length-1], ...b} : null;
+}
+// Weiger stil door te gaan als er data lijkt te ontbreken.
+async function veiligheidscontrole(){
+  const b = await nieuwsteBackup();
+  if(!b) return;
+  const nu = omvang(D), toen = omvang(b.state);
+  const nietsGeladen = D._fabriek === true && toen > 0;
+  const flinkMinder  = toen >= 6 && nu * 2 < toen;
+  if(nietsGeladen || flinkMinder){
+    herstelKandidaat = b;
+    $("#hb-tekst").textContent =
+      "De app start met " + nu + " item(s), maar de backup van "
+      + fmtTijdstip(b.opgeslagenOp) + " bevat er " + toen
+      + ". Er is niets overschreven — je kunt die backup terugzetten.";
+    $("#herstel-banner").hidden = false;
   }
 }
+$("#hb-herstel").onclick = ()=>{
+  if(!herstelKandidaat) return;
+  D = herstelKandidaat.state; normalize(); save();
+  $("#herstel-banner").hidden = true; herstelKandidaat = null;
+  switchView("vandaag"); flash("Backup teruggezet ✓");
+};
+$("#hb-negeer").onclick = ()=>{ $("#herstel-banner").hidden = true; herstelKandidaat = null; };
+
+/* ---- status ---- */
 function fmtTijdstip(ms){
   if(!ms) return "nog niet";
   const d = new Date(ms);
@@ -883,19 +964,56 @@ function fmtTijdstip(ms){
 function updateOpslagStatus(){
   const el = document.getElementById("opslag-status");
   if(!el) return;
-  el.textContent = "Opslag: " + cloudMode
-    + " · Laatst opgeslagen: " + fmtTijdstip(D && D._savedAt)
-    + " · geladen uit: " + loadedFrom;
-  el.classList.toggle("warn", cloudMode.indexOf("⚠︎") >= 0);
+  let txt, warn = false;
+  if(opslagFout){
+    txt = "⚠︎ Opslaan lukt niet in deze weergave — maak een backup via de knop hieronder";
+    warn = true;
+  } else {
+    txt = "Opgeslagen: " + fmtTijdstip(D && D._savedAt) + " · op dit toestel";
+    if(persistGranted === false){
+      txt += " · ⚠︎ zet de app op je beginscherm, anders kan je browser de gegevens opruimen";
+      warn = true;
+    }
+  }
+  el.textContent = txt;
+  el.classList.toggle("warn", warn);
 }
-// openstaande wijziging direct wegschrijven bij verlaten/achtergrond
-function flushNow(){
-  if(!dirty) return;
-  saveLocalOnly(); stashPending();
-  if(cloudReady && artCap){ clearTimeout(cloudTimer); cloudSave(); }
+// Vraag de browser de opslag nooit automatisch op te ruimen.
+async function vraagPersist(){
+  try{
+    if(!navigator.storage || !navigator.storage.persisted) return;
+    persistGranted = await navigator.storage.persisted();
+    if(!persistGranted && navigator.storage.persist) persistGranted = await navigator.storage.persist();
+  }catch(e){ persistGranted = null; }
+  updateOpslagStatus();
 }
-window.addEventListener("pagehide", flushNow);
-document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushNow(); });
+async function initOpslag(){
+  idb = await idbOpen();
+  await loadIdbFallback();
+  await veiligheidscontrole();
+  await vraagPersist();
+  updateOpslagStatus();
+}
+
+/* ---- service worker: app opent offline vanaf het beginscherm ---- */
+function initSW(){
+  if(!("serviceWorker" in navigator)) return;
+  if(location.protocol !== "http:" && location.protocol !== "https:") return;
+  navigator.serviceWorker.register("./sw.js").then(reg=>{
+    reg.addEventListener("updatefound", ()=>{
+      const sw = reg.installing;
+      if(!sw) return;
+      sw.addEventListener("statechange", ()=>{
+        if(sw.state === "installed" && navigator.serviceWorker.controller)
+          flash("Nieuwe versie klaar — sluit en heropen de app");
+      });
+    });
+  }).catch(()=>{});
+}
+function currentTab(){
+  const a = document.querySelector(".view.active");
+  return a ? a.id.replace("view-","") : "vandaag";
+}
 function renderCurrent(){
   const v = currentTab();
   if(v==="vandaag") renderVandaag();
@@ -1000,6 +1118,8 @@ function switchView(v){
   if(v==="menu") renderMenu();
   if(v==="voortgang") renderVoortgang();
   window.scrollTo(0,0);
+  // onthoud waar je was, zonder een "opgeslagen"-tijdstempel te zetten
+  if(D && D.ui && D.ui.tab !== v){ D.ui.tab = v; saveUI(); }
 }
 $$("nav.tabs button").forEach(b=> b.onclick = ()=>switchView(b.dataset.v));
 
@@ -1459,18 +1579,25 @@ function addDays(iso, n){ const d=new Date(iso+"T00:00:00"); d.setDate(d.getDate
 function recentSaturday(){ const d=new Date(); const back=(d.getDay()-6+7)%7; d.setDate(d.getDate()-back); return d.toISOString().slice(0,10); }
 function fmtDagShort(iso){ return new Date(iso+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"long"}); }
 function fmtDagDatum(iso){ return new Date(iso+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"}); }
-let menuStart = recentSaturday();
+// De week waarin je bladert + je gekozen startdag horen bij je gegevens, niet bij
+// deze pagina-sessie: anders sta je na het heropenen weer op een andere week.
+function menuStart(){
+  if(!D.menu.startdatum) D.menu.startdatum = recentSaturday();
+  return D.menu.startdatum;
+}
+function setMenuStart(iso){ D.menu.startdatum = iso; save(); renderMenu(); }
 
 function renderMenu(){
-  $("#wk-startdatum").value = menuStart;
-  const eind = addDays(menuStart, 6);
-  $("#wk-range").textContent = fmtDagDatum(menuStart) + " – " + fmtDagDatum(eind);
+  const start = menuStart();
+  $("#wk-startdatum").value = start;
+  const eind = addDays(start, 6);
+  $("#wk-range").textContent = fmtDagDatum(start) + " – " + fmtDagDatum(eind);
   // datalist met opgeslagen gerechten
   $("#gerechten-namen").innerHTML = D.gerechten.map(g=>`<option value="${esc(g.naam)}"></option>`).join("");
 
   const host = $("#menu-dagen"); host.innerHTML="";
   for(let i=0;i<7;i++){
-    const iso = addDays(menuStart, i);
+    const iso = addDays(start, i);
     const entry = D.diners[iso] || {gerecht:"", receptId:null};
     const recept = entry.receptId ? D.gerechten.find(g=>g.id===entry.receptId) : null;
     const heeftTekst = (entry.gerecht||"").trim().length>0;
@@ -1506,13 +1633,13 @@ function setDiner(iso, waarde, publiceer){
   bewaar();
   // herteken alleen de knop-status van deze rij (zonder focus te verliezen)
   const rows = $$("#menu-dagen .mday");
-  const idx = Math.round((new Date(iso+"T00:00:00") - new Date(menuStart+"T00:00:00"))/86400000);
+  const idx = Math.round((new Date(iso+"T00:00:00") - new Date(menuStart()+"T00:00:00"))/86400000);
   const btn = rows[idx] && rows[idx].querySelector(".rc");
   if(btn){ btn.textContent = match ? "📖" : (v?"🔖":""); btn.classList.toggle("linked", !!match); }
 }
-$("#wk-prev").onclick = ()=>{ menuStart = addDays(menuStart, -7); renderMenu(); };
-$("#wk-next").onclick = ()=>{ menuStart = addDays(menuStart, 7); renderMenu(); };
-$("#wk-startdatum").addEventListener("change", ()=>{ if($("#wk-startdatum").value){ menuStart = $("#wk-startdatum").value; renderMenu(); } });
+$("#wk-prev").onclick = ()=>setMenuStart(addDays(menuStart(), -7));
+$("#wk-next").onclick = ()=>setMenuStart(addDays(menuStart(),  7));
+$("#wk-startdatum").addEventListener("change", ()=>{ if($("#wk-startdatum").value) setMenuStart($("#wk-startdatum").value); });
 
 /* ---- gerechten (recepten) ---- */
 function renderGerechten(){
@@ -1689,35 +1816,33 @@ $("#reset-btn").onclick = ()=>{
     D = defaultData(); save(); switchView("vandaag"); flash("Alles gereset");
   });
 };
-$("#export-btn").onclick = async ()=>{
-  const data = JSON.stringify(D, null, 2);
-  const filename = "planning-backup-" + todayISO() + ".json";
-  if(dlCap){                                   // echte opslag in de app
-    try{ await dlCap.save({filename, data}); flash("Backup opgeslagen ✓"); }
-    catch(e){
-      const c = e && e.code;
-      flash(c==="declined" ? "Backup geannuleerd" : "Backup opslaan lukte niet");
-    }
-    return;
-  }
-  try{                                         // standalone/zelf-gehost
-    const blob = new Blob([data], {type:"application/json"});
+$("#export-btn").onclick = ()=>{
+  try{
+    const blob = new Blob([JSON.stringify(D, null, 2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href=url; a.download=filename;
+    a.href = url; a.download = "planning-backup-" + todayISO() + ".json";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 2000);
     flash("Backup gedownload");
-  }catch(e){ flash("Downloaden lukt niet in deze weergave"); }
+  }catch(e){ flash("Downloaden lukt hier niet — kopieer de tekst uit Terugzetten"); }
 };
-$("#import-btn").onclick = ()=>{ $("#mi-json").value=""; showModal("modal-import"); };
+$("#import-btn").onclick = ()=>{ $("#mi-json").value=""; $("#mi-file").value=""; showModal("modal-import"); };
 $("#mi-cancel").onclick = ()=>hideModal("modal-import");
+$("#mi-file").addEventListener("change", ()=>{
+  const f = $("#mi-file").files && $("#mi-file").files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{ $("#mi-json").value = String(r.result||""); };
+  r.onerror = ()=> flash("Bestand lezen lukte niet");
+  r.readAsText(f);
+});
 $("#mi-ok").onclick = ()=>{
   let obj = null;
   try{ obj = JSON.parse($("#mi-json").value); }catch(e){ obj = null; }
   if(!obj || typeof obj !== "object" || Array.isArray(obj)){ flash("Ongeldige backup (geen JSON)"); return; }
   D = obj; normalize();
-  save();                                      // stempelt + schrijft weg (wint van al het oude)
+  save();
   hideModal("modal-import"); switchView("vandaag"); flash("Backup teruggezet ✓");
 };
 
@@ -1746,20 +1871,15 @@ function capital(s){ return s?s.charAt(0).toUpperCase()+s.slice(1):""; }
    INIT
 ============================================================ */
 function init(){
-  // Snapshot van de authored body (leeg, vóór render) — voor de pagina-fallback-publish.
-  PRISTINE_BODY = document.body.innerHTML;
-  load();
+  load();                             // synchroon: app start meteen met je gegevens
   $("#today-date").textContent = fmtDateNL(new Date());
   $("#sw-geluid").classList.toggle("on", D.instellingen.geluid);
   $("#sw-trillen").classList.toggle("on", D.instellingen.trillen);
-  recalcStreak(); saveLocalOnly();   // niet publiceren op laden
-  // tab herstellen na een pagina-publish-reload
-  let startTab = "vandaag";
-  try{ const t = sessionStorage.getItem("od_tab"); if(t){ startTab = t; sessionStorage.removeItem("od_tab"); } }catch(e){}
-  switchView(startTab);
-  try{ if(sessionStorage.getItem("od_saved")){ sessionStorage.removeItem("od_saved"); setSaved(); } }catch(e){}
+  recalcStreak();
+  switchView(D.ui.tab || "vandaag");  // kom terug waar je was
   updateOpslagStatus();
-  initCloud();                        // async: cloud markeren + vroege wijziging pushen
+  initOpslag();                       // async: IndexedDB, backups, persist-verzoek
+  initSW();                           // async: offline vanaf het beginscherm
 }
 init();
 </script>
