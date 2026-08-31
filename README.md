@@ -1,3 +1,8 @@
+> **Let op — deze repo bevat twee losse projecten:**
+> 1. **Vermogensmonitor** (Excel/Python) — hieronder beschreven.
+> 2. **[Planning](daily-routine/)** — een mobiele web-app voor dagelijkse routines,
+>    taken, een weekmenu en voortgang. Zie [`daily-routine/`](daily-routine/).
+
 # Vermogensmonitor Premium — geïntegreerd standaardbestand
 
 Eén schaalbaar Excel-standaardbestand voor de accountantspraktijk dat het actuele
