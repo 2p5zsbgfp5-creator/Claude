@@ -2127,7 +2127,9 @@ function authMsg(t, cls){ const m = $("#auth-msg"); if(m){ m.textContent = t || 
 async function codeNaarIdentiteit(code){
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("planning:" + code));
   const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
-  return { email: "u" + hex.slice(0,40) + "@planning.app", password: "p" + hex };
+  // Domein met echte MX-records, want Supabase weigert verzonnen domeinen als "invalid".
+  // Er wordt geen mail verstuurd (mits Confirm email uit staat); dit is puur een sleutel.
+  return { email: "planninguser" + hex.slice(0,40) + "@gmail.com", password: "p" + hex };
 }
 // Inloggen met alléén een zelfgekozen code. Geen mail: bestaat de identiteit al →
 // inloggen; nog niet → meteen aanmaken met deze code.
@@ -2161,8 +2163,15 @@ async function inloggen(){
         authMsg("Account aangemaakt en ingelogd! ✓", "ok");   // onAuthStateChange neemt het over
       } else {
         // Geen sessie = e-mailbevestiging staat nog aan in Supabase.
-        authMsg("Bijna! Zet in Supabase ‘Confirm email’ uit (Authentication → Email), dan werkt inloggen zonder mail.", "warn");
+        authMsg("Bijna klaar! Zet in Supabase de instelling ‘Confirm email’ UIT " +
+                "(Authentication → Sign In / Providers → Email), en log dan opnieuw in.", "warn");
       }
+      return;
+    }
+    if(msg.includes("not confirmed") || msg.includes("email not confirmed")){
+      // Account bestaat maar is nog niet bevestigd → confirm-email staat nog aan.
+      authMsg("Bijna klaar! Zet in Supabase ‘Confirm email’ UIT " +
+              "(Authentication → Sign In / Providers → Email), en log dan opnieuw in.", "warn");
       return;
     }
     // Andere fout.
