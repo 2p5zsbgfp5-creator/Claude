@@ -620,6 +620,23 @@
   </div>
 </div>
 
+<!-- ===== Backup exporteren ===== -->
+<div class="modal" id="modal-export">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h3>Backup exporteren</h3>
+    <p class="muted small" style="margin:0 0 12px" id="me-hint"></p>
+    <div class="fld">
+      <textarea id="me-json" style="min-height:150px" readonly></textarea>
+    </div>
+    <div class="row" style="gap:10px">
+      <button class="btn ghost grow" id="me-close">Sluiten</button>
+      <button class="btn ghost grow" id="me-copy">Kopieer</button>
+      <button class="btn grow" id="me-download">Download</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Backup terugzetten ===== -->
 <div class="modal" id="modal-import">
   <div class="sheet">
@@ -644,9 +661,9 @@
 <div class="saved" id="saved">Opgeslagen ✓</div>
 <div class="flash" id="flash"></div>
 
-<!-- Eenmalige startgegevens (overgenomen uit de vorige versie). Wordt alleen
-     gebruikt als er nog niets op dit toestel is opgeslagen. -->
-<script id="seed-state" type="application/json">{"routines":[{"id":"trj1kd5vvf3","naam":"Military Ochtend","type":"timer","emoji":"🪖","dagdeel":"ochtend","dagen":[0,1,2,3,4,5,6],"stappen":[{"id":"fq3n0klvvf3","naam":"Jumping jacks","emoji":"🤸","werkSec":45,"rustSec":15,"instructie":"Explosief, armen helemaal boven je hoofd."},{"id":"7kradzmvvf3","naam":"Push-ups","emoji":"💪","werkSec":45,"rustSec":15,"instructie":"Rug recht, borst naar de grond. Knieën mag."},{"id":"43kd8ravvf3","naam":"Squats","emoji":"🦵","werkSec":45,"rustSec":15,"instructie":"Zak tot je dijen horizontaal zijn, hakken op de grond."},{"id":"8u9y5ouvvf3","naam":"Mountain climbers","emoji":"⛰️","werkSec":45,"rustSec":15,"instructie":"Plankpositie, knieën snel naar de borst."},{"id":"gpmvplgvvf3","naam":"Plank","emoji":"🧱","werkSec":45,"rustSec":15,"instructie":"Strak lichaam, buik en billen aanspannen."},{"id":"lc3l7aevvf3","naam":"Lunges","emoji":"🚶","werkSec":45,"rustSec":15,"instructie":"Wissel per been af, knie net boven de grond."},{"id":"l8zrvhjvvf3","naam":"High knees","emoji":"🏃","werkSec":45,"rustSec":15,"instructie":"Ter plaatse rennen, knieën hoog op."},{"id":"8zkuwjevvf3","naam":"Burpees","emoji":"🔥","werkSec":45,"rustSec":15,"instructie":"Squat, plank, push-up, sprong. Volle beweging."},{"id":"ubc4wuzvvf3","naam":"Sit-ups","emoji":"🧎","werkSec":45,"rustSec":15,"instructie":"Rustig omhoog, gecontroleerd terug."},{"id":"2c5tkrzvvf3","naam":"Superman","emoji":"🦸","werkSec":45,"rustSec":15,"instructie":"Op je buik, armen en benen tegelijk optillen."},{"id":"3b196oxvvf3","naam":"Cooldown / rekken","emoji":"🧘","werkSec":30,"rustSec":0,"instructie":"Diep ademhalen, spieren losjes uitrekken."}]},{"id":"ax8bkngvvf3","naam":"Avond voorbereiding","type":"checklist","emoji":"🌙","dagdeel":"avond","dagen":[0,1,2,3,4,5,6],"stappen":[{"id":"5cj4bftvvf3","naam":"Broodjes smeren voor morgen","emoji":"🥪","tijd":"21:00","instructie":""},{"id":"ypjn7uvvvf3","naam":"Sportkleding klaarleggen","emoji":"👕","tijd":"","instructie":""},{"id":"cu4enclvvf3","naam":"Fles water vullen","emoji":"💧","tijd":"","instructie":""},{"id":"sz8zggtvvf3","naam":"Nieuws / updates checken","emoji":"📰","tijd":"","instructie":""},{"id":"7baepygvvf3","naam":"Telefoon opladen + wekker","emoji":"⏰","tijd":"22:30","instructie":""}]}],"taken":[{"id":"4ez3e0jdpwc","klaar":false,"icoon":"🦷","tekst":"Tandarts","context":"Afspraak maken bij tandarts","termijn":"lang","vervaldatum":"2026-11-30"},{"id":"mgrh2h8qte4","klaar":false,"icoon":"","tekst":"Opzeggen Amazon prime","context":"","termijn":"kort","vervaldatum":""}],"voortgang":{"sessies":[],"streakLangste":0},"lichaam":{"lengteCm":null,"streefKg":null,"metingen":[]},"diners":{},"gerechten":[{"id":"qzfuaslvvf3","naam":"Spaghetti bolognese","emoji":"🍝","ingredienten":"400 g gehakt\n1 ui\n2 tenen knoflook\n1 blik tomatenblokjes\nspaghetti\nParmezaan","bereiding":"Fruit ui en knoflook. Bak het gehakt rul. Voeg tomaten toe en laat 20 min pruttelen. Kook de spaghetti. Serveer met kaas."}],"instellingen":{"geluid":true,"trillen":true},"voltooid":{}}</script>
+<!-- Eenmalige startgegevens. Leeg in de repo: hier hoort geen persoonlijke data.
+     Alleen gebruikt als er op dit toestel nog niets is opgeslagen. -->
+<script id="app-state" type="application/json"></script>
 
 <script id="app-js">
 "use strict";
@@ -830,7 +847,7 @@ function tsOf(o){ return (o && typeof o._savedAt === "number") ? o._savedAt : 0;
 // Eenmalige startgegevens, alleen gebruikt bij een lege installatie: zo begin je
 // niet opnieuw als je van de oude versie komt. Zodra je iets opslaat is dit klaar.
 function seedState(){
-  const el = document.getElementById("seed-state");
+  const el = document.getElementById("app-state");
   const t = el ? (el.textContent||"").trim() : "";
   if(!t) return null;
   try{
@@ -1826,16 +1843,34 @@ $("#reset-btn").onclick = ()=>{
     D = defaultData(); save(); switchView("vandaag"); flash("Alles gereset");
   });
 };
+// Downloaden werkt alleen op je eigen webadres; in een ingesloten weergave doet
+// een download-link niets. Daarom staat de backup hier ook als kopieerbare tekst.
 $("#export-btn").onclick = ()=>{
+  $("#me-json").value = JSON.stringify(D, null, 2);
+  const kanDownloaden = !ingesloten();
+  $("#me-download").style.display = kanDownloaden ? "" : "none";
+  $("#me-hint").textContent = kanDownloaden
+    ? "Bewaar dit bestand ergens veilig. Terugzetten kan via “Backup terugzetten”."
+    : "Downloaden kan niet in deze ingesloten weergave. Kopieer de tekst hieronder en plak "
+    + "die in de app op je beginscherm bij “Backup terugzetten”.";
+  showModal("modal-export");
+};
+$("#me-close").onclick = ()=>hideModal("modal-export");
+$("#me-copy").onclick = async ()=>{
+  const ta = $("#me-json");
+  try{ await navigator.clipboard.writeText(ta.value); flash("Gekopieerd ✓"); }
+  catch(e){ ta.focus(); ta.select(); flash("Selecteer en kopieer de tekst"); }
+};
+$("#me-download").onclick = ()=>{
   try{
-    const blob = new Blob([JSON.stringify(D, null, 2)], {type:"application/json"});
+    const blob = new Blob([$("#me-json").value], {type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = "planning-backup-" + todayISO() + ".json";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 2000);
     flash("Backup gedownload");
-  }catch(e){ flash("Downloaden lukt hier niet — kopieer de tekst uit Terugzetten"); }
+  }catch(e){ flash("Downloaden lukt hier niet — gebruik Kopieer"); }
 };
 $("#import-btn").onclick = ()=>{ $("#mi-json").value=""; $("#mi-file").value=""; showModal("modal-import"); };
 $("#mi-cancel").onclick = ()=>hideModal("modal-import");
