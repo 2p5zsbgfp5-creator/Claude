@@ -55,22 +55,26 @@ create policy "eigen rij wijzigen" on public.app_state
 De publieke `anon`-key mag hierna gerust in de app staan: zónder ingelogde gebruiker
 geeft Row Level Security niets terug, en met inloggen zie je alleen je eigen rij.
 
-### 3. Zet inloggen met e-mail + zelfgekozen code aan (géén mail)
+### 3. Zet inloggen met alléén een code aan (géén e-mail, géén mail)
 
-De app logt in met je **e‑mailadres + een code die je zelf kiest** (een wachtwoord),
-volledig in de app — er wordt geen mail verstuurd. Daarvoor moet e‑mailbevestiging uit:
+De app logt in met **alleen een code die je zelf kiest**. Er wordt geen e‑mailadres
+gevraagd en geen mail verstuurd: uit je code leidt de app onder water een vaste,
+verborgen identiteit (e‑mail + wachtwoord) af via SHA‑256. Dezelfde code geeft overal
+dezelfde gegevens; een andere code is een eigen, losstaand account. Daarvoor moet
+e‑mailbevestiging uit staan:
 
 1. **Authentication → Providers → Email** (of **Sign In / Providers → Email**): zorg dat
    **Email** aanstaat.
 2. Zet **"Confirm email" UIT**. Dan maakt aanmelden meteen een actieve sessie zonder
-   bevestigingsmail, zodat je puur met je e‑mail + code inlogt.
+   bevestigingsmail, zodat je puur met je code inlogt.
 
 > Geen custom SMTP of e‑mailsjablonen nodig. Op het gratis niveau kun je die toch niet
 > aanpassen — deze methode omzeilt dat volledig.
 >
-> Beveiliging: zonder e‑mailbevestiging kan in principe iedereen een account aanmaken,
-> maar door Row Level Security ziet elk account alleen de **eigen** gegevens. Kies een
-> code die je verder nergens gebruikt.
+> **Beveiliging:** de app staat openbaar en de code is de énige sleutel tot je gegevens.
+> Row Level Security houdt elke code strikt bij de eigen gegevens, maar wie jouw code
+> kent kan erbij. Kies daarom een unieke, niet te raden code (geen `123456`), en bewaar
+> hem goed — hij kan niet worden hersteld.
 
 ### 4. Vul je twee sleutels in `config.js`
 

@@ -292,7 +292,7 @@
   #auth-card h1{font-size:22px; margin:0 0 6px; text-align:center}
   #auth-card p{color:var(--muted); font-size:14px; line-height:1.5; margin:0 0 18px; text-align:center}
   #auth-card label{display:block; font-size:13px; color:var(--muted); margin:0 0 6px}
-  #auth-email,#auth-code{width:100%; padding:14px 14px; border-radius:var(--radius-s);
+  #auth-code{width:100%; padding:14px 14px; border-radius:var(--radius-s);
     background:var(--panel); border:1px solid var(--line2); color:var(--txt); font-size:16px}
   #auth-login{width:100%; margin-top:16px; padding:15px; border-radius:var(--radius-s);
     background:var(--accent); color:#04180f; font-weight:700; font-size:16px}
@@ -307,21 +307,19 @@
     <div class="logo">⚡</div>
     <h1>Planning</h1>
 
-    <p>Log in met je e‑mailadres en een <b>code</b> die je zelf kiest — er wordt géén
-       mail verstuurd. De <b>eerste keer</b> verzin je zelf een code (minstens 6 tekens);
-       daarna log je met diezelfde code in, ook op andere toestellen.</p>
-    <label for="auth-email">E‑mailadres</label>
-    <input id="auth-email" type="email" inputmode="email" autocomplete="username"
-           placeholder="jij@voorbeeld.nl" />
-    <label for="auth-code" style="margin-top:14px">Jouw code (minstens 6 tekens)</label>
-    <input id="auth-code" type="password" inputmode="numeric" autocomplete="current-password"
+    <p>Log in met alleen een <b>code</b> die je zelf kiest — geen e‑mail, geen
+       wachtwoord om te onthouden. De <b>eerste keer</b> verzin je zelf een code
+       (minstens 6 tekens); daarna log je met diezelfde code in, ook op andere
+       toestellen.</p>
+    <label for="auth-code">Jouw code</label>
+    <input id="auth-code" type="password" inputmode="text" autocomplete="off"
            placeholder="Verzin of vul je code in" />
     <button id="auth-login" type="button">Inloggen</button>
 
     <div id="auth-msg"></div>
-    <div id="auth-foot">Onthoud je code goed — je hebt hem nodig op elk toestel. Je
-      gegevens staan in je eigen Supabase-project, met Row Level Security afgeschermd:
-      alleen jij kunt erbij.</div>
+    <div id="auth-foot">Onthoud je code goed — je hebt hem nodig op elk toestel, en
+      hij kan niet worden hersteld. Kies een code die niet te raden is: hij is de enige
+      sleutel tot je gegevens.</div>
   </div>
 </div>
 
@@ -2120,33 +2118,40 @@ function toonAuth(show){
 function accountUI(user){
   const row = $("#account-row"), em = $("#account-email");
   if(!row) return;
-  if(user){ row.hidden = false; if(em) em.textContent = "Ingelogd als " + (user.email || "—"); }
+  if(user){ row.hidden = false; if(em) em.textContent = "Ingelogd met je code ✓"; }
   else row.hidden = true;
 }
 function authMsg(t, cls){ const m = $("#auth-msg"); if(m){ m.textContent = t || ""; m.className = cls || ""; } }
-// Inloggen met e-mail + zelfgekozen code (wachtwoord). Er wordt geen mail verstuurd:
-// bestaat het account al → inloggen; nog niet → meteen aanmaken met deze code.
+// Leid uit de zelfgekozen code een verborgen, vaste identiteit (e-mail + wachtwoord)
+// af. Dezelfde code → dezelfde identiteit → dezelfde gegevens, ook op een ander toestel.
+async function codeNaarIdentiteit(code){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("planning:" + code));
+  const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+  return { email: "u" + hex.slice(0,40) + "@planning.app", password: "p" + hex };
+}
+// Inloggen met alléén een zelfgekozen code. Geen mail: bestaat de identiteit al →
+// inloggen; nog niet → meteen aanmaken met deze code.
 async function inloggen(){
-  const emIn = $("#auth-email"), coIn = $("#auth-code"), btn = $("#auth-login");
-  const email = (emIn && emIn.value || "").trim();
-  const code  = (coIn && coIn.value || "");
-  if(!/.+@.+\..+/.test(email)){ authMsg("Vul een geldig e‑mailadres in.", "warn"); return; }
+  const coIn = $("#auth-code"), btn = $("#auth-login");
+  const code = (coIn && coIn.value || "").trim();
   if(code.length < 6){ authMsg("Kies een code van minstens 6 tekens.", "warn"); return; }
   if(!sb){ authMsg("Cloud is nog niet ingesteld (config.js).", "warn"); return; }
+  if(!crypto || !crypto.subtle){ authMsg("Deze weergave ondersteunt inloggen niet — open de app op https.", "warn"); return; }
   if(btn) btn.disabled = true; authMsg("Bezig met inloggen…", "");
   try{
-    // 1) Probeer in te loggen op een bestaand account.
-    let { error } = await sb.auth.signInWithPassword({ email, password: code });
+    const { email, password } = await codeNaarIdentiteit(code);
+    // 1) Probeer in te loggen op een bestaande identiteit.
+    let { error } = await sb.auth.signInWithPassword({ email, password });
     if(!error){ authMsg("Ingelogd! ✓", "ok"); return; }
 
     const msg = (error.message || "").toLowerCase();
     if(msg.includes("invalid login credentials")){
-      // 2) Account bestaat nog niet (of code klopt niet) → probeer aan te maken.
-      const up = await sb.auth.signUp({ email, password: code });
+      // 2) Bestaat nog niet → aanmaken met deze code.
+      const up = await sb.auth.signUp({ email, password });
       if(up.error){
         const um = (up.error.message || "").toLowerCase();
         if(um.includes("already registered") || um.includes("already exists")){
-          authMsg("Deze code klopt niet bij dit e‑mailadres. Probeer je eigen code opnieuw.", "warn");
+          authMsg("Deze code klopt niet. Probeer je eigen code opnieuw.", "warn");
         } else {
           authMsg("Aanmaken lukte niet: " + (up.error.message || "onbekende fout"), "warn");
         }
@@ -2169,9 +2174,8 @@ async function inloggen(){
 let authUIbound = false;
 function bindAuthUI(){
   if(authUIbound) return; authUIbound = true;
-  const login = $("#auth-login"), email = $("#auth-email"), code = $("#auth-code"), out = $("#logout-btn");
+  const login = $("#auth-login"), code = $("#auth-code"), out = $("#logout-btn");
   if(login) login.onclick = inloggen;
-  if(email) email.addEventListener("keydown", e=>{ if(e.key === "Enter") inloggen(); });
   if(code)  code.addEventListener("keydown",  e=>{ if(e.key === "Enter") inloggen(); });
   if(out) out.onclick = async ()=>{
     if(!sb) return;
