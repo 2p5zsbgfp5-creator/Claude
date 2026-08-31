@@ -263,6 +263,7 @@
     padding:6px 12px; border-radius:20px; font-size:12px; font-weight:700;
     opacity:0; transform:translateY(-6px); transition:opacity .2s, transform .2s; pointer-events:none}
   .saved.show{opacity:1; transform:none}
+  #opslag-status.warn{color:var(--warn)}
 </style>
 </head>
 <body>
@@ -374,6 +375,7 @@
     </div>
     <p class="small faint" id="opslag-status" style="margin:2px 2px 12px">Opslag: —</p>
     <button class="btn ghost block" id="export-btn" style="margin-bottom:10px">⬇︎ Backup exporteren</button>
+    <button class="btn ghost block" id="import-btn" style="margin-bottom:10px">⬆︎ Backup terugzetten</button>
     <button class="btn danger block" id="reset-btn">Alles wissen</button>
     <p class="center faint small" style="margin-top:18px">Planning</p>
   </section>
@@ -599,11 +601,27 @@
   </div>
 </div>
 
+<!-- ===== Backup terugzetten ===== -->
+<div class="modal" id="modal-import">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <h3>Backup terugzetten</h3>
+    <p class="muted small" style="margin:0 0 12px">Plak hieronder de inhoud van je backup-bestand (JSON). Dit vervangt je huidige gegevens.</p>
+    <div class="fld">
+      <textarea id="mi-json" style="min-height:160px" placeholder='{"routines":[...],"taken":[...]}'></textarea>
+    </div>
+    <div class="row" style="gap:10px">
+      <button class="btn ghost grow" id="mi-cancel">Annuleer</button>
+      <button class="btn grow" id="mi-ok">Terugzetten</button>
+    </div>
+  </div>
+</div>
+
 <div class="saved" id="saved">Opgeslagen ☁︎</div>
 <div class="flash" id="flash"></div>
 
-<!-- Blijvende opslag: files-vorm laadt hier window.__APP_STATE__ (kan 404'en vóór de eerste opslag) -->
-<script src="data/state.js"></script>
+<!-- Blijvende opslag: files-vorm laadt hier window.__APP_STATE2__ (kan 404'en vóór de eerste opslag) -->
+<script src="data/state-v2.js"></script>
 <!-- Pagina-vorm: de ingebedde state (fallback) -->
 <script id="app-state" type="application/json"></script>
 
@@ -690,12 +708,17 @@ function defaultData(){
    De cloud is leidend zodra hij beschikbaar is; anders valt alles terug op
    localStorage.                                                               */
 let D;
-const DATA_JS_PATH = "data/state.js";
+// v2: nieuw pad. Het oude data/state.js wordt bewust NIET meer gelezen — dat
+// bestand kon verouderd zijn en won dan van nieuwere data ("alles weg").
+const DATA_JS_PATH = "data/state-v2.js";
+const STASH_KEY = "od_stash";
 let artCap = null;        // opgeloste artifact-capability, of null
+let dlCap = null;         // downloads-capability (backup opslaan)
 let cloudReady = false;   // capability bruikbaar in deze view
 let dirty = false;        // gebruiker wijzigde iets sinds laden
 let cloudTimer = null, cloudSaving = false, cloudPending = false;
 let cloudMode = "lokaal"; // status voor de gebruiker
+let loadedFrom = "nieuw"; // waaruit de state is geladen (transparantie)
 // Snapshot van de authored body (leeg, vóór render) — nodig om de volledige
 // pagina te kunnen herpubliceren (fallback). Gezet onderaan bij INIT.
 let PRISTINE_BODY = "";
@@ -724,38 +747,69 @@ function normalize(){
   D.taken.forEach(t=>{ if(t.icoon==null) t.icoon=""; if(t.context==null) t.context=""; });
 }
 
-// Lees de door de cloud meegeleverde state — zónder fetch:
-//  1) files-vorm: data/state.js heeft window.__APP_STATE__ gezet
-//  2) pagina-vorm: <script id="app-state"> bevat de JSON
-function readServedState(){
-  try{ if(window.__APP_STATE__ && typeof window.__APP_STATE__ === "object") return window.__APP_STATE__; }catch(e){}
+/* ---- tijdstempel: maakt "nieuwste wint" mogelijk ---- */
+function stamp(){ D._savedAt = Date.now(); D._rev = (D._rev||0) + 1; }
+function tsOf(o){ return (o && typeof o._savedAt === "number") ? o._savedAt : 0; }
+
+// Verzamel ALLE bronnen waar state kan staan. Geen vaste voorrang meer:
+// hierna wint simpelweg de nieuwste. Een bron zonder tijdstempel telt als 0.
+function candidates(){
+  const out = [];
+  const push = (o, bron)=>{ if(o && typeof o === "object" && !Array.isArray(o)) out.push({state:o, bron, ts:tsOf(o)}); };
+  try{ push(window.__APP_STATE2__, "cloud-bestand"); }catch(e){}
   const el = document.getElementById("app-state");
-  if(el){ const t = (el.textContent||"").trim(); if(t){ try{ return JSON.parse(t); }catch(e){} } }
-  return null;
+  if(el){ const t=(el.textContent||"").trim(); if(t){ try{ push(JSON.parse(t), "cloud-pagina"); }catch(e){} } }
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw) push(JSON.parse(raw), "dit apparaat"); }catch(e){}
+  try{ const raw = sessionStorage.getItem(STASH_KEY); if(raw) push(JSON.parse(raw), "niet-verzonden wijziging"); }catch(e){}
+  return out;
 }
 function load(){
-  let src = readServedState();          // cloud/meegeleverde state is leidend
-  if(!src){ try{ const raw = localStorage.getItem(LS_KEY); if(raw) src = JSON.parse(raw); }catch(e){} }
-  D = src || defaultData();
+  const list = candidates();
+  let best = null;
+  // >= zodat bij gelijke tijd de laatst toegevoegde bron (de stash) wint
+  for(const k of list){ if(!best || k.ts >= best.ts) best = k; }
+  D = best ? best.state : defaultData();
+  loadedFrom = best ? best.bron : "nieuw";
   normalize();
 }
 function saveLocalOnly(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(D)); }catch(e){}
 }
+function stashPending(){
+  try{ sessionStorage.setItem(STASH_KEY, JSON.stringify(D)); }catch(e){}
+}
+function clearStash(){
+  try{ sessionStorage.removeItem(STASH_KEY); }catch(e){}
+}
 function save(){
+  stamp();               // altijd stempelen -> nieuwste wint later
   saveLocalOnly();
+  stashPending();        // overleeft een herlaad/conflict
   dirty = true;
   scheduleCloudSave();
+  updateOpslagStatus();
+}
+// Tijdens typen: wél direct vastleggen (niets kan verloren gaan), maar nog niet
+// publiceren — zo herlaadt de pagina niet midden in een woord.
+function saveSoft(){
+  stamp();
+  saveLocalOnly();
+  stashPending();
+  dirty = true;
+  updateOpslagStatus();
 }
 
 /* ---- cloud (artifact-capability) ---- */
 async function initCloud(){
-  if(!(window.claude && typeof window.claude.use === "function")){ cloudMode="lokaal (dit apparaat)"; updateOpslagStatus(); return; }
+  if(!(window.claude && typeof window.claude.use === "function")){
+    cloudMode="⚠︎ alleen dit apparaat"; updateOpslagStatus(); return;
+  }
   cloudMode = "verbinden…"; updateOpslagStatus();
   let art = null;
   try{ art = await claude.use("artifact"); }catch(e){ art = null; }
-  if(!art){ cloudMode="lokaal (cloud niet beschikbaar)"; updateOpslagStatus(); return; }
-  artCap = art; cloudReady = true; cloudMode = "cloud actief"; updateOpslagStatus();
+  try{ dlCap = await claude.use("downloads"); }catch(e){ dlCap = null; }
+  if(!art){ cloudMode="⚠︎ alleen dit apparaat"; updateOpslagStatus(); return; }
+  artCap = art; cloudReady = true; cloudMode = "cloud"; updateOpslagStatus();
   if(dirty) scheduleCloudSave(true);    // vroege wijziging alsnog wegschrijven
 }
 function scheduleCloudSave(immediate){
@@ -794,33 +848,54 @@ async function cloudSave(){
   if(!cloudReady || !artCap) return;
   if(cloudSaving){ cloudPending = true; return; }
   cloudSaving = true;
+  stashPending();   // wijziging veiligstellen vóór elke publicatie
   try{
     // 1) files-vorm: klein databestand, herlaadt deze view NIET
-    await artCap.publish({ [DATA_JS_PATH]: "window.__APP_STATE__=" + jsonSafe(D) + ";" });
-    cloudMode = "cloud opgeslagen ✓"; setSaved(); updateOpslagStatus();
+    await artCap.publish({ [DATA_JS_PATH]: "window.__APP_STATE2__=" + jsonSafe(D) + ";" });
+    clearStash();
+    cloudMode = "cloud"; setSaved(); updateOpslagStatus();
   }catch(e){
     const code = e && e.code;
-    if(code === "conflict"){ /* deze view herlaadt vanzelf naar de winnaar */ }
+    if(code === "conflict"){ /* view herlaadt naar de winnaar; de stash bewaart onze wijziging */ }
     else if(code === "rate_limited"){ clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudSave, 8000); }
     else if(code==="capability_disabled"||code==="capability_removed"||code==="transform_error"||code==="invalid_content"||code==="read_only_path"){
       // files-vorm niet beschikbaar -> volledige pagina publiceren (herlaadt de view)
       try{
         try{ sessionStorage.setItem("od_saved","1"); sessionStorage.setItem("od_tab", currentTab()); }catch(_){}
         await artCap.publish(buildDoc());
-        cloudMode = "cloud opgeslagen ✓ (pagina)"; updateOpslagStatus();
-      }catch(e2){ cloudMode = "cloud-fout: " + ((e2&&e2.code)||"?"); updateOpslagStatus(); }
+        clearStash();
+        cloudMode = "cloud"; updateOpslagStatus();
+      }catch(e2){ cloudMode = "⚠︎ fout: " + ((e2&&e2.code)||"?"); updateOpslagStatus(); }
     } else {
-      cloudMode = "cloud-fout: " + (code||"?"); updateOpslagStatus();
+      cloudMode = "⚠︎ fout: " + (code||"?"); updateOpslagStatus();
     }
   }finally{
     cloudSaving = false;
     if(cloudPending){ cloudPending = false; scheduleCloudSave(true); }
   }
 }
+function fmtTijdstip(ms){
+  if(!ms) return "nog niet";
+  const d = new Date(ms);
+  return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"}) + " " +
+         d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
+}
 function updateOpslagStatus(){
   const el = document.getElementById("opslag-status");
-  if(el) el.textContent = "Opslag: " + cloudMode;
+  if(!el) return;
+  el.textContent = "Opslag: " + cloudMode
+    + " · Laatst opgeslagen: " + fmtTijdstip(D && D._savedAt)
+    + " · geladen uit: " + loadedFrom;
+  el.classList.toggle("warn", cloudMode.indexOf("⚠︎") >= 0);
 }
+// openstaande wijziging direct wegschrijven bij verlaten/achtergrond
+function flushNow(){
+  if(!dirty) return;
+  saveLocalOnly(); stashPending();
+  if(cloudReady && artCap){ clearTimeout(cloudTimer); cloudSave(); }
+}
+window.addEventListener("pagehide", flushNow);
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushNow(); });
 function renderCurrent(){
   const v = currentTab();
   if(v==="vandaag") renderVandaag();
@@ -1406,7 +1481,8 @@ function renderMenu(){
       <input class="dish" list="gerechten-namen" placeholder="avondeten…" value="${esc(entry.gerecht||"")}" />
       <button class="rc ${recept?'linked':''}" title="${recept?'Recept bekijken':'Opslaan als gerecht'}">${recept?'📖':(heeftTekst?'🔖':'')}</button>`;
     const inp = row.querySelector(".dish");
-    inp.addEventListener("change", ()=> setDiner(iso, inp.value));
+    inp.addEventListener("input",  ()=> setDiner(iso, inp.value, false)); // direct vastleggen
+    inp.addEventListener("change", ()=> setDiner(iso, inp.value, true));  // publiceren bij verlaten
     row.querySelector(".rc").onclick = ()=>{
       const e = D.diners[iso] || {gerecht:"", receptId:null};
       if(e.receptId && D.gerechten.find(g=>g.id===e.receptId)) openGerechtModal(e.receptId);
@@ -1417,16 +1493,17 @@ function renderMenu(){
   }
   renderGerechten();
 }
-function setDiner(iso, waarde){
+function setDiner(iso, waarde, publiceer){
+  const bewaar = publiceer ? save : saveSoft;
   const v = waarde.trim();
-  if(!v){ delete D.diners[iso]; save(); return; }
+  if(!v){ delete D.diners[iso]; bewaar(); return; }
   const e = D.diners[iso] || {gerecht:"", receptId:null};
   e.gerecht = v;
   // koppel automatisch aan een bestaand gerecht met dezelfde naam
   const match = D.gerechten.find(g=>g.naam.toLowerCase()===v.toLowerCase());
   e.receptId = match ? match.id : null;
   D.diners[iso] = e;
-  save();
+  bewaar();
   // herteken alleen de knop-status van deze rij (zonder focus te verliezen)
   const rows = $$("#menu-dagen .mday");
   const idx = Math.round((new Date(iso+"T00:00:00") - new Date(menuStart+"T00:00:00"))/86400000);
@@ -1589,8 +1666,10 @@ function renderLichaam(){
     host.appendChild(row);
   }
 }
-$("#lc-lengte").addEventListener("change", ()=>{ D.lichaam.lengteCm = parseFloat($("#lc-lengte").value)||null; save(); renderLichaam(); });
-$("#lc-streef").addEventListener("change", ()=>{ D.lichaam.streefKg = parseFloat($("#lc-streef").value)||null; save(); renderLichaam(); });
+$("#lc-lengte").addEventListener("input",  ()=>{ D.lichaam.lengteCm = parseFloat($("#lc-lengte").value)||null; saveSoft(); renderLichaam(); });
+$("#lc-lengte").addEventListener("change", ()=>{ D.lichaam.lengteCm = parseFloat($("#lc-lengte").value)||null; save();     renderLichaam(); });
+$("#lc-streef").addEventListener("input",  ()=>{ D.lichaam.streefKg = parseFloat($("#lc-streef").value)||null; saveSoft(); renderLichaam(); });
+$("#lc-streef").addEventListener("change", ()=>{ D.lichaam.streefKg = parseFloat($("#lc-streef").value)||null; save();     renderLichaam(); });
 $("#lc-log").onclick = ()=>{
   const kg = parseFloat($("#lc-gewicht").value);
   if(!(kg>0)){ flash("Vul een gewicht in"); return; }
@@ -1610,16 +1689,36 @@ $("#reset-btn").onclick = ()=>{
     D = defaultData(); save(); switchView("vandaag"); flash("Alles gereset");
   });
 };
-$("#export-btn").onclick = ()=>{
-  try{
-    const blob = new Blob([JSON.stringify(D,null,2)], {type:"application/json"});
+$("#export-btn").onclick = async ()=>{
+  const data = JSON.stringify(D, null, 2);
+  const filename = "planning-backup-" + todayISO() + ".json";
+  if(dlCap){                                   // echte opslag in de app
+    try{ await dlCap.save({filename, data}); flash("Backup opgeslagen ✓"); }
+    catch(e){
+      const c = e && e.code;
+      flash(c==="declined" ? "Backup geannuleerd" : "Backup opslaan lukte niet");
+    }
+    return;
+  }
+  try{                                         // standalone/zelf-gehost
+    const blob = new Blob([data], {type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href=url; a.download="backup-"+todayISO()+".json";
+    a.href=url; a.download=filename;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 2000);
     flash("Backup gedownload");
   }catch(e){ flash("Downloaden lukt niet in deze weergave"); }
+};
+$("#import-btn").onclick = ()=>{ $("#mi-json").value=""; showModal("modal-import"); };
+$("#mi-cancel").onclick = ()=>hideModal("modal-import");
+$("#mi-ok").onclick = ()=>{
+  let obj = null;
+  try{ obj = JSON.parse($("#mi-json").value); }catch(e){ obj = null; }
+  if(!obj || typeof obj !== "object" || Array.isArray(obj)){ flash("Ongeldige backup (geen JSON)"); return; }
+  D = obj; normalize();
+  save();                                      // stempelt + schrijft weg (wint van al het oude)
+  hideModal("modal-import"); switchView("vandaag"); flash("Backup teruggezet ✓");
 };
 
 /* ============================================================

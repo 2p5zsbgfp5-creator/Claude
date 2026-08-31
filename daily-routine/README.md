@@ -1,13 +1,14 @@
 # Planning ⚡
 
 Een simpele, mobielvriendelijke web-app voor je dagelijkse routines (met een korte,
-max. ~10 min oefenroutine), een takenlijst, een weekmenu en je voortgang. Geen account,
-geen backend: alles draait offline en de data blijft **lokaal op je apparaat**
-(`localStorage`).
+max. ~10 min oefenroutine), een takenlijst, een weekmenu en je voortgang. Geen account
+en geen backend. In de gepubliceerde app bewaart hij je gegevens via de
+`artifact`-opslag (zie **Opslag** hieronder); open je het bestand lokaal, dan valt hij
+terug op `localStorage` op je eigen apparaat.
 
 ## Wat kan het
 
-- **Vandaag** — je dagelijkse routines op één scherm, een streak-teller (🔥 dagen op rij)
+- **Vandaag** — je dagelijkse routines op één scherm, een streak-teller (⚡ dagen op rij)
   en de taken die spelen.
 - **Trainingsmodus** — een volledig-scherm intervaltimer die je door elke oefening loodst:
   werk-/rustblokken, groot aftellen, voortgangsbalk, geluids- en trilsignalen. Bij afronden
@@ -51,12 +52,19 @@ Het is één self-contained bestand.
   # open http://localhost:8000
   ```
 
-> **Opslag:** in de gepubliceerde app worden je gegevens **server-side bewaard** in je (privé)
-> artifact via de `artifact`-capability (een databestand `data/state.json` dat na een wijziging
-> wordt bijgewerkt). Zo blijven ze behouden na sluiten/heropnieuw en werken ze **cross-device**
-> wanneer je dezelfde app-link opent. `localStorage` wordt als snelle lokale cache/terugval
-> gebruikt (en is de opslag als je het bestand standalone/zelf-gehost opent). **Voortgang →
-> Backup exporteren** blijft als handmatige veiligheidsklep.
+> **Opslag (v2 — betrouwbaar).** Elke opslag krijgt een **tijdstempel** (`_savedAt`). Bij het
+> openen verzamelt de app *alle* plekken waar state kan staan — het cloud-databestand
+> (`data/state-v2.js`), de in de pagina ingebedde state, `localStorage` en een
+> `sessionStorage`-stash van nog niet verzonden wijzigingen — en gebruikt simpelweg de
+> **nieuwste**. Daardoor kan een verouderde bron nooit meer winnen (dat was de oorzaak van
+> eerder gegevensverlies: het oude `data/state.json`/`state.js` had vaste voorrang).
+>
+> Verder: wijzigingen worden **direct** lokaal vastgelegd én veiliggesteld vóór elke publicatie
+> (zodat een herlaad of `conflict` niets kost), bij het sluiten/achtergrond van de app wordt
+> openstaand werk weggeschreven, en in **Voortgang** staat de opslagstatus met **"Laatst
+> opgeslagen"**. Werkt de cloud niet, dan toont de app een duidelijke waarschuwing.
+> **Backup exporteren** (echte bestandsopslag) en **Backup terugzetten** staan er als noodrem;
+> de artifact-**versiegeschiedenis** is bovendien een automatisch archief.
 
 ## Techniek
 
