@@ -15,6 +15,6 @@
    inloggen en alles automatisch in de cloud opslaan en synchroniseren.
 ============================================================ */
 window.PLANNING_CONFIG = {
-  SUPABASE_URL:      "VUL_JE_PROJECT_URL_IN",     // bv. https://abcdxyz.supabase.co
-  SUPABASE_ANON_KEY: "VUL_JE_ANON_KEY_IN"          // lange sleutel die begint met "eyJ..."
+  SUPABASE_URL:      "https://zcdvycsrkfzzfmugsdyb.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_pgg1hnIb80j8Rw-63FsfmA_DjKEBPBS"
 };
