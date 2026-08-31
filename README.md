@@ -1,7 +1,11 @@
-> **Let op — deze repo bevat twee losse projecten:**
+> **Let op — deze repo bevat losse projecten:**
 > 1. **Vermogensmonitor** (Excel/Python) — hieronder beschreven.
-> 2. **[Planning](daily-routine/)** — een mobiele web-app voor dagelijkse routines,
->    taken, een weekmenu en voortgang. Zie [`daily-routine/`](daily-routine/).
+> 2. **[Planning — cloud](planning/)** — de mobiele web-app voor dagelijkse routines,
+>    taken, een weekmenu en voortgang, met **automatische cloud-opslag (Supabase)**
+>    zodat je gegevens bewaard blijven en op meerdere toestellen synchroniseren.
+>    Zie [`planning/`](planning/). **Dit is de actuele versie.**
+> 3. **[Planning — lokaal](daily-routine/)** — de oudere, puur lokale versie (opslag
+>    alleen op één toestel), bewaard ter referentie.
 
 # Vermogensmonitor Premium — geïntegreerd standaardbestand
 
