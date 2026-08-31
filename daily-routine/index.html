@@ -955,6 +955,10 @@ $("#hb-herstel").onclick = ()=>{
 $("#hb-negeer").onclick = ()=>{ $("#herstel-banner").hidden = true; herstelKandidaat = null; };
 
 /* ---- status ---- */
+// Draaien we in een iframe (bijv. een ingesloten preview) i.p.v. als eigen pagina?
+function ingesloten(){
+  try{ return window.top !== window.self; }catch(e){ return true; }
+}
 function fmtTijdstip(ms){
   if(!ms) return "nog niet";
   const d = new Date(ms);
@@ -970,7 +974,13 @@ function updateOpslagStatus(){
     warn = true;
   } else {
     txt = "Opgeslagen: " + fmtTijdstip(D && D._savedAt) + " · op dit toestel";
-    if(persistGranted === false){
+    if(ingesloten()){
+      // In een ingesloten weergave kan de browser opslag van derde partijen opruimen,
+      // en het beginscherm-advies hieronder geldt daar niet. Wees daar eerlijk over.
+      txt += " · ⚠︎ ingesloten weergave: open de app op je eigen webadres en zet hem op je"
+           + " beginscherm, anders kan je browser deze gegevens na verloop van tijd opruimen";
+      warn = true;
+    } else if(persistGranted === false){
       txt += " · ⚠︎ zet de app op je beginscherm, anders kan je browser de gegevens opruimen";
       warn = true;
     }

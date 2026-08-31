@@ -39,7 +39,7 @@ gerust aan, of maak je eigen niveaus op naarmate je fitter wordt.
 
 ## Openen
 
-- **Op de telefoon (zo hoort het):** open <https://2p5zsbgfp5-creator.github.io/planning/>
+- **Op de telefoon (zo hoort het):** open <https://2p5zsbgfp5-creator.github.io/Planning/>
   en kies *Zet op beginscherm*. Daarna opent hij als een app: fullscreen, offline, en met
   opslag die de browser niet opruimt.
 - **Lokaal op je computer:** serveer de map (niet dubbelklikken — via `file://` werkt de
