@@ -3,7 +3,7 @@
    Let op: hier wordt ALLEEN de app zelf gecachet — nooit je gegevens.
    Die staan in localStorage/IndexedDB en komen hier niet langs. */
 
-const CACHE_VERSION = "planning-v4";
+const CACHE_VERSION = "planning-v5";
 const SHELL = ["./", "./index.html", "./config.js", "./manifest.json",
                "./apple-touch-icon.png", "./icon-192.png", "./icon-512.png"];
 

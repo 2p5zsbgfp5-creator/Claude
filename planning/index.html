@@ -292,11 +292,14 @@
   #auth-card h1{font-size:22px; margin:0 0 6px; text-align:center}
   #auth-card p{color:var(--muted); font-size:14px; line-height:1.5; margin:0 0 18px; text-align:center}
   #auth-card label{display:block; font-size:13px; color:var(--muted); margin:0 0 6px}
-  #auth-email{width:100%; padding:14px 14px; border-radius:var(--radius-s);
+  #auth-email,#auth-code{width:100%; padding:14px 14px; border-radius:var(--radius-s);
     background:var(--panel); border:1px solid var(--line2); color:var(--txt); font-size:16px}
-  #auth-send{width:100%; margin-top:14px; padding:15px; border-radius:var(--radius-s);
+  #auth-code{letter-spacing:.3em; text-align:center; font-size:22px}
+  #auth-send,#auth-verify{width:100%; margin-top:14px; padding:15px; border-radius:var(--radius-s);
     background:var(--accent); color:#04180f; font-weight:700; font-size:16px}
-  #auth-send:disabled{opacity:.6}
+  #auth-send:disabled,#auth-verify:disabled{opacity:.6}
+  .linklike{display:block; width:100%; margin-top:12px; padding:8px; background:none;
+    color:var(--muted); font-size:14px; text-decoration:underline}
   #auth-msg{margin-top:16px; font-size:14px; line-height:1.5; text-align:center; min-height:1.2em}
   #auth-msg.ok{color:var(--accent)}
   #auth-msg.warn{color:var(--warn)}
@@ -306,13 +309,29 @@
   <div id="auth-card">
     <div class="logo">⚡</div>
     <h1>Planning</h1>
-    <p>Log in met je e‑mail. Je krijgt een inloglink toegestuurd — geen wachtwoord
-       nodig. Daarna wordt alles automatisch in de cloud opgeslagen en op al je
-       toestellen bijgewerkt.</p>
-    <label for="auth-email">E‑mailadres</label>
-    <input id="auth-email" type="email" inputmode="email" autocomplete="email"
-           placeholder="jij@voorbeeld.nl" />
-    <button id="auth-send" type="button">Stuur mij een inloglink</button>
+
+    <!-- Stap 1: e-mail -->
+    <div id="auth-step-email">
+      <p>Log in met je e‑mail. Je krijgt een korte <b>code</b> toegestuurd — geen
+         wachtwoord nodig. Daarna wordt alles automatisch in de cloud opgeslagen en op
+         al je toestellen bijgewerkt.</p>
+      <label for="auth-email">E‑mailadres</label>
+      <input id="auth-email" type="email" inputmode="email" autocomplete="email"
+             placeholder="jij@voorbeeld.nl" />
+      <button id="auth-send" type="button">Stuur mij een code</button>
+    </div>
+
+    <!-- Stap 2: code invoeren -->
+    <div id="auth-step-code" hidden>
+      <p>We hebben je een e‑mail met een code gestuurd. Vul die code hieronder in
+         (kijk ook even in je spam-map).</p>
+      <label for="auth-code">Code uit de e‑mail</label>
+      <input id="auth-code" type="text" inputmode="numeric" autocomplete="one-time-code"
+             placeholder="123456" />
+      <button id="auth-verify" type="button">Inloggen</button>
+      <button id="auth-back" type="button" class="linklike">Ander e‑mailadres gebruiken</button>
+    </div>
+
     <div id="auth-msg"></div>
     <div id="auth-foot">Je gegevens staan in je eigen Supabase-project en zijn met
       Row Level Security afgeschermd: alleen jij kunt er bij.</div>
@@ -2110,6 +2129,7 @@ function toonAuth(show){
   if(!ov) return;
   ov.classList.toggle("show", !!show);
   ov.setAttribute("aria-hidden", show ? "false" : "true");
+  if(show && typeof toonCodeStap === "function"){ toonCodeStap(false); }  // begin bij de e-mailstap
 }
 function accountUI(user){
   const row = $("#account-row"), em = $("#account-email");
@@ -2118,28 +2138,58 @@ function accountUI(user){
   else row.hidden = true;
 }
 function authMsg(t, cls){ const m = $("#auth-msg"); if(m){ m.textContent = t || ""; m.className = cls || ""; } }
-async function stuurInloglink(){
+let authEmail = "";               // e-mailadres waarvoor we een code hebben verstuurd
+// Wissel tussen stap 1 (e-mail) en stap 2 (code invoeren).
+function toonCodeStap(show){
+  const se = $("#auth-step-email"), sc = $("#auth-step-code");
+  if(se) se.hidden = !!show;
+  if(sc) sc.hidden = !show;
+  if(show){ const c = $("#auth-code"); if(c){ c.value = ""; setTimeout(()=>c.focus(), 50); } }
+}
+// Stap 1: stuur een inlogcode naar het e-mailadres.
+async function stuurCode(){
   const inp = $("#auth-email"), btn = $("#auth-send");
   const email = (inp && inp.value || "").trim();
   if(!/.+@.+\..+/.test(email)){ authMsg("Vul een geldig e‑mailadres in.", "warn"); return; }
   if(!sb){ authMsg("Cloud is nog niet ingesteld (config.js).", "warn"); return; }
   if(btn) btn.disabled = true; authMsg("Bezig met versturen…", "");
   try{
-    const { error } = await sb.auth.signInWithOtp({
-      email, options:{ emailRedirectTo: location.href.split("#")[0] }
-    });
+    const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true } });
     if(error) throw error;
-    authMsg("Gelukt! Check je e‑mail en klik op de inloglink. Je mag dit tabblad open laten.", "ok");
+    authEmail = email;
+    toonCodeStap(true);
+    authMsg("Gelukt! Je code staat in je e‑mail — vul hem hierboven in.", "ok");
   }catch(e){
     authMsg("Versturen lukte niet: " + (e && e.message ? e.message : "onbekende fout"), "warn");
+  }finally{ if(btn) btn.disabled = false; }
+}
+// Stap 2: controleer de ingevoerde code en log in.
+async function verifieerCode(){
+  const inp = $("#auth-code"), btn = $("#auth-verify");
+  const token = (inp && inp.value || "").replace(/\s+/g, "");
+  if(!/^\d{6}$/.test(token)){ authMsg("Vul de 6‑cijferige code uit je e‑mail in.", "warn"); return; }
+  if(!sb || !authEmail){ authMsg("Vraag eerst een code aan.", "warn"); return; }
+  if(btn) btn.disabled = true; authMsg("Bezig met inloggen…", "");
+  try{
+    const { error } = await sb.auth.verifyOtp({ email: authEmail, token, type: "email" });
+    if(error) throw error;
+    authMsg("Ingelogd! ✓", "ok");
+    // onAuthStateChange/setCloudUser neemt het nu over (app laden + synchroniseren).
+  }catch(e){
+    authMsg("Inloggen lukte niet: " + (e && e.message ? e.message : "code onjuist of verlopen"), "warn");
   }finally{ if(btn) btn.disabled = false; }
 }
 let authUIbound = false;
 function bindAuthUI(){
   if(authUIbound) return; authUIbound = true;
-  const send = $("#auth-send"), email = $("#auth-email"), out = $("#logout-btn");
-  if(send) send.onclick = stuurInloglink;
-  if(email) email.addEventListener("keydown", e=>{ if(e.key === "Enter") stuurInloglink(); });
+  const send = $("#auth-send"), email = $("#auth-email"),
+        verify = $("#auth-verify"), code = $("#auth-code"),
+        back = $("#auth-back"), out = $("#logout-btn");
+  if(send) send.onclick = stuurCode;
+  if(email) email.addEventListener("keydown", e=>{ if(e.key === "Enter") stuurCode(); });
+  if(verify) verify.onclick = verifieerCode;
+  if(code) code.addEventListener("keydown", e=>{ if(e.key === "Enter") verifieerCode(); });
+  if(back) back.onclick = ()=>{ authMsg("", ""); toonCodeStap(false); const em=$("#auth-email"); if(em) em.focus(); };
   if(out) out.onclick = async ()=>{
     if(!sb) return;
     try{ await cloudPushNu(); }catch(e){}          // laatste wijzigingen nog wegschrijven
